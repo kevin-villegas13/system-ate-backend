@@ -9,8 +9,13 @@ import { DelegateAssignmentsModule } from './delegate_assignments/delegate_assig
 import { BenefitDeliveriesModule } from './benefit_deliveries/benefit_deliveries.module';
 import { AffiliatesModule } from './affiliates/affiliates.module';
 import { EventsModule } from './events/events.module';
+import { ConfigModule } from '@nestjs/config';
+
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     AuthModule,
     UserModule,
     SectorsModule,
