@@ -8,7 +8,7 @@ import { User } from 'src/user/entities/user.entity';
 @Entity('affiliates')
 export class Affiliate extends BaseEntity {
   @Column({ unique: true, name: 'affiliate_code' })
-  affiliateCode: number;
+  affiliateCode: string;
 
   @Column({ name: 'affiliate_name', length: 200 })
   affiliateName: string;
@@ -19,6 +19,9 @@ export class Affiliate extends BaseEntity {
   @ManyToOne(() => Gender, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'gender_id' })
   gender: Gender;
+
+  @Column({ nullable: true, length: 100 })
+  email: string;
 
   @Column({ nullable: true, length: 100 })
   contact: string;
