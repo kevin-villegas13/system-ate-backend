@@ -8,7 +8,7 @@ export class User extends BaseEntity {
   username: string;
 
   @Column({ name: 'password_hash', length: 255 })
-  passwordHash: string;
+  password: string;
 
   @ManyToOne(() => Role, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'role_id' })

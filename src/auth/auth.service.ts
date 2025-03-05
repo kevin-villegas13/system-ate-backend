@@ -1,26 +1,37 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../user/entities/user.entity';
+import { Repository } from 'typeorm';
+import { LoginAuthDto } from './dto/login-auth.dto';
+import { NotFound, NotImplemented } from 'src/common/exceptions';
+import * as argon2 from 'argon2';
+import { Tokens } from './interface/type-token';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
-  }
+  constructor(
+    private readonly jwtService: JwtService,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  async login(loginUserDto: LoginAuthDto): Promise<Tokens> {
+    const { username, password } = loginUserDto;
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+    const user = await this.userRepository.findOne({
+      where: { username: username },
+    });
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+    if (!user) throw new NotFound('User not found');
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    const passwordMatch = await argon2.verify(user.password, password);
+
+    if (!passwordMatch) throw new NotImplemented('The password is incorrect');
+
+    return {
+      accessToken: await this.jwtService.signAsync({
+        id: user.id,
+      }),
+    };
   }
 }
