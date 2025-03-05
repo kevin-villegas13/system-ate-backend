@@ -10,6 +10,11 @@ import { BenefitDeliveriesModule } from './benefit_deliveries/benefit_deliveries
 import { AffiliatesModule } from './affiliates/affiliates.module';
 import { EventsModule } from './events/events.module';
 import { ConfigModule } from '@nestjs/config';
+import { GendersModule } from './genders/genders.module';
+import { RoleModule } from './role/role.module';
+import { AgeModule } from './age/age.module';
+import { RecipientModule } from './recipient/recipient.module';
+import { DeliveryModule } from './delivery/delivery.module';
 
 @Module({
   imports: [
@@ -26,6 +31,11 @@ import { ConfigModule } from '@nestjs/config';
     BenefitDeliveriesModule,
     AffiliatesModule,
     EventsModule,
+    GendersModule,
+    RoleModule,
+    AgeModule,
+    RecipientModule,
+    DeliveryModule,
   ],
 })
 export class AppModule {}
