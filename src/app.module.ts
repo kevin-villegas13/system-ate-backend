@@ -12,15 +12,16 @@ import { EventsModule } from './events/events.module';
 import { ConfigModule } from '@nestjs/config';
 import { GendersModule } from './genders/genders.module';
 import { RoleModule } from './role/role.module';
-import { AgeModule } from './age/age.module';
 import { RecipientModule } from './recipient/recipient.module';
 import { DeliveryModule } from './delivery/delivery.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    DatabaseModule,
     AuthModule,
     UserModule,
     SectorsModule,
@@ -33,7 +34,6 @@ import { DeliveryModule } from './delivery/delivery.module';
     EventsModule,
     GendersModule,
     RoleModule,
-    AgeModule,
     RecipientModule,
     DeliveryModule,
   ],
