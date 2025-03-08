@@ -93,4 +93,8 @@ export class SectorsService implements OnModuleInit {
       }
     }
   }
+
+  async getAllSectors(): Promise<Sector[]> {
+    return this.sectorRepository.find();
+  }
 }
