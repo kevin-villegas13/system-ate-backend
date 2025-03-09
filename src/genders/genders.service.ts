@@ -11,7 +11,7 @@ export class GendersService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const genderNames = ['Masculino', 'Femenino'];
+    const genderNames = ['Masculino', 'Femenino', 'No especificado', 'Otro'];
 
     for (const genderName of genderNames) {
       const exists = await this.genderRepository.findOne({
