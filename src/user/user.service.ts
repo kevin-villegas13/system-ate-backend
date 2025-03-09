@@ -27,24 +27,24 @@ export class UserService {
   async create(createUserDto: CreateUserDto): Promise<Response<null>> {
     const { username, password, roleName } = createUserDto;
 
-    const existUsers = await this.userRepository.findOne({
-      where: { username },
-    });
+    const [userExists, role] = await Promise.all([
+      this.userRepository.exists({ where: { username } }),
+      this.roleRepository.findOne({ where: { roleName } }),
+    ]);
 
-    if (existUsers)
+    if (userExists)
       throw new Conflict(`El nombre de usuario "${username}" ya está en uso.`);
-
-    const role = await this.roleRepository.findOne({ where: { roleName } });
 
     if (!role) throw new NotFound(`El rol "${roleName}" no existe.`);
 
-    const user = this.userRepository.create({
-      username,
-      password: await argon2.hash(password),
-      role,
+    await this.userRepository.manager.transaction(async (entityManager) => {
+      const user = entityManager.create(User, {
+        username,
+        password: await argon2.hash(password),
+        role,
+      });
+      await entityManager.save(user);
     });
-
-    await this.userRepository.save(user);
 
     return {
       status: true,
@@ -78,17 +78,16 @@ export class UserService {
       ]);
 
     if (search)
-      queryBuilder.andWhere('affiliate.affiliateName ILIKE :search', {
+      queryBuilder.andWhere('user.username ILIKE :search', {
         search: `%${search}%`,
       });
 
     if (roleId) queryBuilder.andWhere('role.id = :roleId', { roleId });
 
-    if (order === SortOrder.ASC || order === SortOrder.DESC)
-      queryBuilder.orderBy(
-        'user.username',
-        order === SortOrder.ASC ? 'ASC' : 'DESC',
-      );
+    queryBuilder.orderBy(
+      'user.username',
+      order === SortOrder.ASC ? 'ASC' : 'DESC',
+    );
 
     const [data, count] = await queryBuilder
       .skip((page - 1) * limit)
@@ -119,41 +118,37 @@ export class UserService {
   ): Promise<Response<User>> {
     const { username, password, roleName, isActive } = updateUserDto;
 
-    const user = await this.findOne(id);
-    if (!user.data) throw new NotFound('Usuario no encontrado');
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['role'],
+    });
 
-    const updatedFields: Partial<User> = {};
+    if (!user) throw new NotFound('Usuario no encontrado');
 
-    // Validar y actualizar el nombre de usuario
-    if (username && username !== user.data.username) {
-      const existingUser = await this.userRepository.findOne({
+    if (username && username !== user.username) {
+      const userExists = await this.userRepository.exist({
         where: { username },
       });
 
-      if (existingUser)
+      if (userExists)
         throw new Conflict(
           `El nombre de usuario "${username}" ya está en uso.`,
         );
 
-      updatedFields.username = username;
+      user.username = username;
     }
 
-    if (password) updatedFields.password = await argon2.hash(password);
+    if (password) user.password = await argon2.hash(password);
 
-    if (roleName) {
+    if (roleName && roleName !== user.role.roleName) {
       const role = await this.roleRepository.findOne({ where: { roleName } });
-
       if (!role) throw new NotFound(`El rol "${roleName}" no existe.`);
-
-      updatedFields.role = role;
+      user.role = role;
     }
 
-    if (typeof isActive !== 'undefined') updatedFields.isActive = isActive;
+    if (typeof isActive !== 'undefined') user.isActive = isActive;
 
-    const updatedUser = await this.userRepository.save({
-      ...user.data,
-      ...updatedFields,
-    });
+    const updatedUser = await this.userRepository.save(user);
 
     return {
       status: true,
@@ -164,11 +159,9 @@ export class UserService {
 
   async deactivate(id: string): Promise<Response<User>> {
     const user = await this.findOne(id);
-
     if (!user.data) throw new NotFound(`Usuario con ID "${id}" no encontrado.`);
 
     user.data.isActive = false;
-
     const updatedUser = await this.userRepository.save(user.data);
 
     return {
@@ -180,7 +173,6 @@ export class UserService {
 
   async remove(id: string): Promise<Response<null>> {
     const user = await this.findOne(id);
-
     if (!user.data) throw new NotFound(`Usuario con ID "${id}" no encontrado.`);
 
     await this.userRepository.remove(user.data);
