@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Affiliate } from './entities/affiliate.entity';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { CreateAffiliateDto } from './dto/create-affiliate.dto';
 import { Response } from '../common/response/response.type';
 import {
@@ -13,6 +13,11 @@ import { Paginator } from '../common/paginator/paginator.helper';
 import { Conflict, NotFound } from '../common/exceptions';
 import { Gender } from 'src/genders/entities/gender.entity';
 import { Sector } from 'src/sectors/entities/sector.entity';
+import { User } from 'src/user/entities/user.entity';
+import { UpdateAffiliateDto } from './dto/update-affiliate.dto';
+import { omit } from 'lodash';
+import { SafeAffiliate, SafeSector } from './interface/safe-affiliate.type';
+
 @Injectable()
 export class AffiliatesService {
   constructor(
@@ -22,52 +27,61 @@ export class AffiliatesService {
     private readonly genderRepository: Repository<Gender>,
     @InjectRepository(Sector)
     private readonly sectorRepository: Repository<Sector>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async create(
     createAffiliateDto: CreateAffiliateDto,
+    userId: string,
   ): Promise<Response<Affiliate>> {
     const { genderId, sectorId, ...affiliateData } = createAffiliateDto;
 
-    const existingAffiliate = await this.affiliateRepository.findOne({
-      where: { dni: createAffiliateDto.dni },
-    });
-
-    if (existingAffiliate)
+    if (
+      await this.affiliateRepository.findOne({
+        where: { dni: affiliateData.dni },
+      })
+    )
       throw new Conflict('Ya existe un afiliado con este DNI.');
 
-    // Buscar el género y el sector
-    const gender = await this.genderRepository.findOne({
-      where: { id: genderId },
-    });
+    const [gender, sector, user] = await Promise.all([
+      this.genderRepository.findOne({ where: { id: genderId } }),
+      this.sectorRepository.findOne({ where: { id: sectorId } }),
+      this.userRepository.findOne({ where: { id: userId } }),
+    ]);
 
-    const sector = await this.sectorRepository.findOne({
-      where: { id: sectorId },
-    });
-
-    // Si no se encuentran el género o el sector, lanzar un error
-    if (!gender || !sector)
-      throw new NotFound('Género o sector no encontrados.');
+    if (!gender || !sector || !user)
+      throw new NotFound('Género, sector o usuario no encontrados.');
 
     const affiliate = this.affiliateRepository.create({
       ...affiliateData,
       gender,
       sector,
+      createdBy: user,
     });
 
-    // Guardar el afiliado en la base de datos
     const savedAffiliate = await this.affiliateRepository.save(affiliate);
+
+    const sanitizedAffiliate = omit(savedAffiliate, [
+      'createdBy.password',
+      'createdBy.updatedAt',
+      'createdAt',
+      'updatedAt',
+      'sector.sectorCode',
+      'sector.createdAt',
+      'sector.updatedAt',
+    ]) as Affiliate;
 
     return {
       status: true,
       message: 'Afiliado creado correctamente.',
-      data: savedAffiliate,
+      data: sanitizedAffiliate,
     };
   }
 
   async getAllAffiliates(
     paginationDto: PaginationAffiliatesDto,
-  ): Promise<ResponseList<Affiliate>> {
+  ): Promise<ResponseList<SafeAffiliate>> {
     const {
       page,
       limit,
@@ -77,68 +91,111 @@ export class AffiliatesService {
       sectorId,
     } = paginationDto;
 
-    // Creamos el QueryBuilder para la consulta
-    const queryBuilder = this.affiliateRepository
-      .createQueryBuilder('affiliate')
-      .leftJoinAndSelect('affiliate.gender', 'gender')
-      .leftJoinAndSelect('affiliate.sector', 'sector');
+    const where: FindOptionsWhere<Affiliate> = {
+      ...(search && { name: ILike(`%${search}%`) }),
+      ...(genderId && { gender: { id: genderId } }),
+      ...(sectorId && { sector: { id: sectorId } }),
+    };
 
-    if (search)
-      queryBuilder.andWhere('affiliate.affiliateName ILIKE :search', {
-        search: `%${search}%`,
-      });
+    const [data, count] = await this.affiliateRepository.findAndCount({
+      where,
+      relations: ['gender', 'sector'],
+      order: { name: order },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
-    if (genderId) queryBuilder.andWhere('gender.id = :genderId', { genderId });
+    const cleanData: SafeAffiliate[] = data.map((affiliate) => ({
+      ...omit(affiliate, ['createdAt', 'updatedAt', 'note']),
+      gender: affiliate.gender || undefined,
+      sector: affiliate.sector
+        ? (omit(affiliate.sector, ['createdAt', 'updatedAt']) as SafeSector)
+        : undefined,
+    }));
 
-    if (sectorId) queryBuilder.andWhere('sector.id = :sectorId', { sectorId });
-    
-    if (order === SortOrder.ASC || order === SortOrder.DESC)
-      queryBuilder.orderBy(
-        'affiliate.affiliateName',
-        order === SortOrder.ASC ? 'ASC' : 'DESC',
-      );
-
-    const [data, count] = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
-
-    return Paginator.Format(data, count, page, limit, search, order);
+    return Paginator.Format(cleanData, count, page, limit, search, order);
   }
 
   async getAffiliateByAffiliateCode(
-    affiliate_code: string,
+    affiliateCode: string,
   ): Promise<Response<Affiliate>> {
-    console.log('Buscando afiliado con código de afiliado:', affiliate_code); // Verifica el código recibido
+    const affiliate = await this.affiliateRepository.findOne({
+      where: { affiliateCode: ILike(affiliateCode) },
+      relations: ['gender', 'sector'],
+    });
 
-    const queryBuilder =
-      this.affiliateRepository.createQueryBuilder('affiliate');
+    if (!affiliate)
+      throw new NotFound(`Afiliado con código ${affiliateCode} no encontrado.`);
 
-    // Unimos las entidades relacionadas
-    queryBuilder
-      .leftJoinAndSelect('affiliate.gender', 'gender')
-      .leftJoinAndSelect('affiliate.sector', 'sector');
-
-    // Imprimir la consulta SQL generada para la depuración
-    const query = queryBuilder.getQuery();
-    console.log('Consulta SQL generada:', query);
-
-    // Buscamos el afiliado por su código de afiliado (affiliate_code)
-    const affiliate = await queryBuilder
-      .where('LOWER(affiliate.affiliate_code) = LOWER(:affiliate_code)', {
-        affiliate_code,
-      })
-      .getOne();
-
-    // Si no se encuentra el afiliado, lanzamos un error
-    if (!affiliate) {
-      throw new NotFound(`Affiliate with code ${affiliate_code} not found`);
-    }
+    const sanitizedAffiliate = omit(affiliate, [
+      'createdAt',
+      'updatedAt',
+      'sector.sectorCode',
+      'sector.createdAt',
+      'sector.updatedAt',
+    ]) as Affiliate;
 
     return {
       status: true,
-      message: 'Afiliado creado correctamente.',
-      data: affiliate,
+      message: 'Afiliado encontrado correctamente.',
+      data: sanitizedAffiliate,
+    };
+  }
+
+  async update(
+    id: string,
+    updateAffiliateDto: UpdateAffiliateDto,
+  ): Promise<Response<null>> {
+    const affiliate = await this.affiliateRepository.findOne({ where: { id } });
+
+    if (!affiliate) throw new NotFound(`Afiliado con ID ${id} no encontrado.`);
+
+    const [gender, sector] = await Promise.all([
+      updateAffiliateDto.genderId
+        ? this.genderRepository.findOne({
+            where: { id: updateAffiliateDto.genderId },
+          })
+        : null,
+
+      updateAffiliateDto.sectorId
+        ? this.sectorRepository.findOne({
+            where: { id: updateAffiliateDto.sectorId },
+          })
+        : null,
+    ]);
+
+    if (updateAffiliateDto.genderId && !gender)
+      throw new NotFound('Género no encontrado.');
+
+    if (updateAffiliateDto.sectorId && !sector)
+      throw new NotFound('Sector no encontrado.');
+
+    if (gender) affiliate.gender = gender;
+
+    if (sector) affiliate.sector = sector;
+
+    Object.assign(affiliate, updateAffiliateDto);
+
+    await this.affiliateRepository.save(affiliate);
+
+    return {
+      status: true,
+      message: 'Afiliado actualizado exitosamente.',
+      data: null,
+    };
+  }
+
+  async remove(id: string): Promise<Response<null>> {
+    const affiliate = await this.affiliateRepository.findOne({ where: { id } });
+
+    if (!affiliate) throw new NotFound(`Afiliado con ID ${id} no encontrado.`);
+
+    await this.affiliateRepository.remove(affiliate);
+
+    return {
+      status: true,
+      message: 'Afiliado eliminado exitosamente.',
+      data: null,
     };
   }
 }

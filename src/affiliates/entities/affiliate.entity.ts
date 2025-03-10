@@ -2,18 +2,27 @@ import { BaseEntity } from '../../common/enities/base-entity';
 import { Child } from '../../children/entities/child.entity';
 import { Gender } from '../../genders/entities/gender.entity';
 import { Sector } from '../../sectors/entities/sector.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
-import { User } from 'src/user/entities/user.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  Index,
+} from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 
 @Entity('affiliates')
 export class Affiliate extends BaseEntity {
   @Column({ unique: true, name: 'affiliate_code' })
+  @Index()
   affiliateCode: string;
 
-  @Column({ name: 'affiliate_name', length: 200 })
-  affiliateName: string;
+  @Column({ name: 'name', length: 200 })
+  name: string;
 
   @Column({ unique: true, length: 20 })
+  @Index()
   dni: string;
 
   @ManyToOne(() => Gender, { onDelete: 'CASCADE' })
@@ -23,7 +32,7 @@ export class Affiliate extends BaseEntity {
   @Column({ nullable: true, length: 100 })
   email: string;
 
-  @Column({ nullable: true, length: 100 })
+  @Column({ nullable: true, length: 15 })
   contact: string;
 
   @ManyToOne(() => Sector, { onDelete: 'CASCADE' })
@@ -36,13 +45,19 @@ export class Affiliate extends BaseEntity {
   @Column({ name: 'has_disability', default: false })
   hasDisability: boolean;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 300 })
   note: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  createdBy: User;
 
-  @OneToMany(() => Child, (child) => child.affiliate)
+  @OneToMany(() => Child, (child) => child.affiliate, { cascade: true })
   children: Child[];
+
+  @Column({ nullable: true, name: 'birthdate', type: 'date' })
+  birthdate: Date;
+
+  @Column({ nullable: true, length: 200 })
+  address: string;
 }

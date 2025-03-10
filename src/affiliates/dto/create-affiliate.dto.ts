@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsNotEmpty,
   IsNumber,
@@ -21,7 +22,7 @@ export class CreateAffiliateDto {
     message:
       'El nombre del afiliado no puede ser más largo que 200 caracteres.',
   })
-  affiliateName: string;
+  name: string;
 
   @IsNotEmpty({ message: 'El DNI es obligatorio.' })
   @IsString({ message: 'El DNI debe ser un texto.' })
@@ -63,6 +64,21 @@ export class CreateAffiliateDto {
   })
   hasDisability?: boolean;
 
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'La fecha de nacimiento debe ser válida (YYYY-MM-DD).' },
+  )
+  birthdate?: Date;
+
+  @IsOptional()
+  @IsString({ message: 'La dirección debe ser un texto.' })
+  @MaxLength(200, {
+    message: 'La dirección no puede tener más de 200 caracteres.',
+  })
+  address?: string;
+
+  @IsOptional()
   @IsString({ message: 'Las notas deben ser un texto.' })
   @MaxLength(500, {
     message: 'Las notas no pueden ser más largas de 500 caracteres.',

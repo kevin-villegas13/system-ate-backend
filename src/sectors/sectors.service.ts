@@ -36,7 +36,7 @@ export class SectorsService {
 
     return {
       status: true,
-      message: 'Lista de sectores para combo box.',
+      message: 'Lista de sectores.',
       data: sectors,
     };
   }
