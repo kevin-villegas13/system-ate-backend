@@ -1,7 +1,7 @@
 import { Affiliate } from 'src/affiliates/entities/affiliate.entity';
 import { BaseEntity } from 'src/common/enities/base-entity';
 import { Gender } from '../../genders/entities/gender.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 
 @Entity('children')
 export class Child extends BaseEntity {

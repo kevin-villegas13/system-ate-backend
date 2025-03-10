@@ -9,7 +9,6 @@ import {
   IsInt,
   Min,
   IsUUID,
-  MinDate,
 } from 'class-validator';
 
 export class CreateChildDto {
@@ -31,10 +30,7 @@ export class CreateChildDto {
 
   @IsNotEmpty()
   @IsDateString({}, { message: 'La fecha de nacimiento debe ser válida.' })
-  @MinDate(new Date(), {
-    message: 'La fecha de nacimiento no puede ser futura.',
-  })
-  birthDate: Date;
+  birthDate: string;
 
   @IsOptional()
   @IsString({ message: 'La nota debe ser un texto.' })

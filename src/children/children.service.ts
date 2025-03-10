@@ -14,6 +14,12 @@ import {
   SortOrder,
 } from 'src/common/paginator/type/paginator.interface';
 import { PaginationChildrenDto } from './dto/paginador-children.dto';
+import { omit } from 'lodash';
+import {
+  SafeAffiliate,
+  SafeChild,
+  SafeGender,
+} from './interfaces/safe-children.type';
 
 @Injectable()
 export class ChildrenService {
@@ -108,7 +114,7 @@ export class ChildrenService {
 
   async getAllChildrenPaginated(
     paginationDto: PaginationChildrenDto,
-  ): Promise<ResponseList<Child>> {
+  ): Promise<ResponseList<SafeChild>> {
     const {
       page,
       limit,
@@ -117,7 +123,7 @@ export class ChildrenService {
       genderId,
     } = paginationDto;
 
-    const where: FindOptionsWhere<Affiliate> = {
+    const where: FindOptionsWhere<Child> = {
       ...(search && { firstName: ILike(`%${search}%`) }),
       ...(genderId && { gender: { id: genderId } }),
     };
@@ -130,25 +136,49 @@ export class ChildrenService {
       take: limit,
     });
 
-    return Paginator.Format(data, count, page, limit, search, order);
+    const reducedData: SafeChild[] = data.map((child) => ({
+      ...omit(child, ['createdAt', 'updatedAt', 'note']),
+      gender:
+        child.gender &&
+        (omit(child.gender, ['createdAt', 'updatedAt']) as SafeGender),
+      affiliate: child.affiliate
+        ? (omit(child.affiliate, [
+            'createdAt',
+            'updatedAt',
+            'contact',
+            'note',
+          ]) as SafeAffiliate)
+        : {
+            id: '',
+            dni: '',
+            affiliateCode: '',
+            name: '',
+            birthdate: new Date(),
+            address: '',
+          },
+    }));
+
+    return Paginator.Format(reducedData, count, page, limit, search, order);
   }
 
   async findByAffiliateId(affiliateId: string): Promise<Response<Child[]>> {
     const affiliate = await this.affiliateRepository.findOne({
-      where: {
-        id: affiliateId,
-      },
+      where: { id: affiliateId },
     });
 
-    if (!affiliate)
-      throw new NotFound(
-        `No encontramos al afiliado con la información proporcionada. Por favor, revisa e intenta nuevamente.`,
-      );
+    if (!affiliate) throw new NotFound('Afiliado no encontrado');
 
     const children = await this.childRepository.find({
-      where: { affiliate },
+      where: {
+        affiliate: {
+          id: affiliate.id,
+        },
+      },
       relations: ['gender'],
     });
+
+    if (children.length === 0)
+      throw new NotFound('No se encontraron niños asociados a este afiliado.');
 
     return {
       status: true,
