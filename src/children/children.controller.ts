@@ -1,34 +1,54 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Query,
+} from '@nestjs/common';
 import { ChildrenService } from './children.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
+import { PaginationChildrenDto } from './dto/paginador-children.dto';
 
 @Controller('children')
 export class ChildrenController {
   constructor(private readonly childrenService: ChildrenService) {}
 
   @Post()
-  create(@Body() createChildDto: CreateChildDto) {
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Body() createChildDto: CreateChildDto) {
     return this.childrenService.create(createChildDto);
   }
 
   @Get()
-  findAll() {
-    return this.childrenService.findAll();
+  @HttpCode(HttpStatus.OK)
+  async getAffiliates(@Query() paginationDto: PaginationChildrenDto) {
+    return this.childrenService.getAllChildrenPaginated(paginationDto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.childrenService.findOne(+id);
+  @HttpCode(HttpStatus.OK)
+  async findByAffiliateId(@Param('id') id: string) {
+    return this.childrenService.findByAffiliateId(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChildDto: UpdateChildDto) {
-    return this.childrenService.update(+id, updateChildDto);
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id') id: string,
+    @Body() updateChildDto: UpdateChildDto,
+  ) {
+    return this.childrenService.update(id, updateChildDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.childrenService.remove(+id);
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id') id: string) {
+    return this.childrenService.remove(id);
   }
 }

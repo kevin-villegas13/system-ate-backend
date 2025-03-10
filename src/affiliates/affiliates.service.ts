@@ -34,7 +34,7 @@ export class AffiliatesService {
   async create(
     createAffiliateDto: CreateAffiliateDto,
     userId: string,
-  ): Promise<Response<Affiliate>> {
+  ): Promise<Response<null>> {
     const { genderId, sectorId, ...affiliateData } = createAffiliateDto;
 
     if (
@@ -60,22 +60,12 @@ export class AffiliatesService {
       createdBy: user,
     });
 
-    const savedAffiliate = await this.affiliateRepository.save(affiliate);
-
-    const sanitizedAffiliate = omit(savedAffiliate, [
-      'createdBy.password',
-      'createdBy.updatedAt',
-      'createdAt',
-      'updatedAt',
-      'sector.sectorCode',
-      'sector.createdAt',
-      'sector.updatedAt',
-    ]) as Affiliate;
+    await this.affiliateRepository.save(affiliate);
 
     return {
       status: true,
       message: 'Afiliado creado correctamente.',
-      data: sanitizedAffiliate,
+      data: null,
     };
   }
 

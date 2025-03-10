@@ -9,14 +9,10 @@ import {
   Patch,
   Post,
   Query,
-  Req,
 } from '@nestjs/common';
 import { AffiliatesService } from './affiliates.service';
 import { CreateAffiliateDto } from './dto/create-affiliate.dto';
 import { PaginationAffiliatesDto } from './dto/paginador-affiliates.dto';
-import { ResponseList } from 'src/common/paginator/type/paginator.interface';
-import { Affiliate } from './entities/affiliate.entity';
-import { Response } from 'src/common/response/response.type';
 import { AuthDecorator } from '..//common/decorators/jwt.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
@@ -32,7 +28,7 @@ export class AffiliatesController {
   async create(
     @Body() createAffiliateDto: CreateAffiliateDto,
     @GetUser() user: User,
-  ): Promise<Response<Affiliate>> {
+  ) {
     return this.affiliatesService.create(createAffiliateDto, user?.id);
   }
 

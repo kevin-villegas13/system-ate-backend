@@ -1,26 +1,159 @@
 import { Injectable } from '@nestjs/common';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { Child } from './entities/child.entity';
+import { Affiliate } from 'src/affiliates/entities/affiliate.entity';
+import { Gender } from 'src/genders/entities/gender.entity';
+import { Response } from 'src/common/response/response.type';
+import { NotFound } from 'src/common/exceptions';
+import { Paginator } from 'src/common/paginator/paginator.helper';
+import {
+  ResponseList,
+  SortOrder,
+} from 'src/common/paginator/type/paginator.interface';
+import { PaginationChildrenDto } from './dto/paginador-children.dto';
 
 @Injectable()
 export class ChildrenService {
-  create(createChildDto: CreateChildDto) {
-    return 'This action adds a new child';
+  constructor(
+    @InjectRepository(Child)
+    private readonly childRepository: Repository<Child>,
+    @InjectRepository(Affiliate)
+    private readonly affiliateRepository: Repository<Affiliate>,
+    @InjectRepository(Gender)
+    private readonly genderRepository: Repository<Gender>,
+  ) {}
+
+  async create(createChildDto: CreateChildDto): Promise<Response<null>> {
+    const { affiliateId, genderId, ...childrenData } = createChildDto;
+
+    const [affiliate, gender] = await Promise.all([
+      this.affiliateRepository.findOne({ where: { id: affiliateId } }),
+      this.genderRepository.findOne({ where: { id: genderId } }),
+    ]);
+
+    if (!affiliate)
+      throw new NotFound(
+        `No encontramos al afiliado que mencionaste. Por favor, revisa el nombre y vuelve a intentarlo.`,
+      );
+
+    if (!gender)
+      throw new NotFound(
+        `No encontramos el género que especificaste. Asegúrate de haber seleccionado correctamente.`,
+      );
+
+    const child = this.childRepository.create({
+      ...childrenData,
+      affiliate,
+      gender,
+    });
+
+    await this.childRepository.save(child);
+
+    return {
+      status: true,
+      message: `¡El niño/a ${child.firstName} ${child.lastName} se ha registrado con éxito!`,
+      data: null,
+    };
   }
 
-  findAll() {
-    return `This action returns all children`;
+  async update(
+    id: string,
+    updateChildDto: UpdateChildDto,
+  ): Promise<Response<null>> {
+    const child = await this.childRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!child)
+      throw new NotFound(
+        `No encontramos a este niño en el sistema. Verifica el nombre e intenta nuevamente.`,
+      );
+
+    Object.assign(child, updateChildDto);
+
+    await this.childRepository.save(child);
+
+    return {
+      status: true,
+      message: `¡Los datos de ${child.firstName} ${child.lastName} han sido actualizados correctamente!`,
+      data: null,
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} child`;
+  async remove(id: string): Promise<Response<null>> {
+    const child = await this.childRepository.findOne({
+      where: {
+        id: id,
+      },
+    });
+
+    if (!child)
+      throw new NotFound(
+        `No encontramos al niño/a con el nombre o información proporcionada. Por favor, revisa e intenta nuevamente.`,
+      );
+
+    await this.childRepository.remove(child);
+
+    return {
+      status: true,
+      message: `El registro del niño/a ha sido eliminado correctamente.`,
+      data: null,
+    };
   }
 
-  update(id: number, updateChildDto: UpdateChildDto) {
-    return `This action updates a #${id} child`;
+  async getAllChildrenPaginated(
+    paginationDto: PaginationChildrenDto,
+  ): Promise<ResponseList<Child>> {
+    const {
+      page,
+      limit,
+      search,
+      order = SortOrder.ASC,
+      genderId,
+    } = paginationDto;
+
+    const where: FindOptionsWhere<Affiliate> = {
+      ...(search && { firstName: ILike(`%${search}%`) }),
+      ...(genderId && { gender: { id: genderId } }),
+    };
+
+    const [data, count] = await this.childRepository.findAndCount({
+      where,
+      relations: ['gender', 'affiliate'],
+      order: { firstName: order },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return Paginator.Format(data, count, page, limit, search, order);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} child`;
+  async findByAffiliateId(affiliateId: string): Promise<Response<Child[]>> {
+    const affiliate = await this.affiliateRepository.findOne({
+      where: {
+        id: affiliateId,
+      },
+    });
+
+    if (!affiliate)
+      throw new NotFound(
+        `No encontramos al afiliado con la información proporcionada. Por favor, revisa e intenta nuevamente.`,
+      );
+
+    const children = await this.childRepository.find({
+      where: { affiliate },
+      relations: ['gender'],
+    });
+
+    return {
+      status: true,
+      message: `Se encontraron ${children.length} niños/as asociados a este afiliado.`,
+      data: children,
+    };
   }
 }
