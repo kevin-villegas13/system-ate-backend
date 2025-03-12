@@ -8,11 +8,13 @@ import {
 } from 'class-validator';
 
 export class CreateBenefitDto {
-  @IsNotEmpty({ message: 'El nombre es obligatorio' })
-  @MaxLength(100, { message: 'El nombre no puede tener más de 100 caracteres' })
+  @IsNotEmpty({ message: 'Por favor, ingresa un nombre para el beneficio.' })
+  @MaxLength(100, {
+    message: 'El nombre no puede ser más largo de 100 caracteres.',
+  })
   name: string;
 
-  @IsNotEmpty({ message: 'El tipo de beneficio es obligatorio' })
+  @IsNotEmpty({ message: 'El tipo de beneficio es necesario.' })
   typeId: number;
 
   @IsOptional()
@@ -21,11 +23,17 @@ export class CreateBenefitDto {
   })
   ageRange?: string;
 
-  @IsInt({ message: 'El stock debe ser un número entero' })
-  @IsPositive({ message: 'El stock debe ser mayor o igual a 0' })
+  @IsInt({ message: 'El stock debe ser un número entero.' })
+  @IsPositive({ message: 'El stock debe ser un número positivo.' })
   stock: number;
 
   @IsOptional()
-  @IsBoolean({ message: 'isAvailable debe ser un valor booleano' })
+  @IsBoolean({ message: 'isAvailable debe ser un valor booleano.' })
   isAvailable?: boolean;
+
+  @IsOptional()
+  @MaxLength(200, {
+    message: 'La descripción no puede superar los 200 caracteres.',
+  })
+  description?: string;
 }

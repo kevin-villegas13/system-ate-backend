@@ -8,12 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { BenefitsService } from './benefits.service';
 import { CreateBenefitDto } from './dto/create-benefit.dto';
 import { UpdateBenefitDto } from './dto/update-benefit.dto';
 import { UpdateBenefitStatusDto } from './dto/update-benefit-status.dto';
 import { CreateBenefitTypeDto } from './dto/create-benefit-type.dto';
+import { PaginationBenefitsDto } from './dto/paginador-benefits.dto';
 
 @Controller('benefits')
 export class BenefitsController {
@@ -31,8 +33,17 @@ export class BenefitsController {
     return this.benefitsService.createBenefitType(dto);
   }
 
-  
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  paginateDelegates(@Query() dto: PaginationBenefitsDto) {
+    return this.benefitsService.paginateBenefits(dto);
+  }
 
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  findOneBenefit(@Param('id') id: string) {
+    return this.benefitsService.findOneBenefit(id);
+  }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)

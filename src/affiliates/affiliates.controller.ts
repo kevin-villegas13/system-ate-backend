@@ -30,8 +30,8 @@ export class AffiliatesController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async getAffiliates(@Query() paginationDto: PaginationAffiliatesDto) {
-    return this.affiliatesService.getAllAffiliates(paginationDto);
+  async paginatedAffiliates(@Query() dto: PaginationAffiliatesDto) {
+    return this.affiliatesService.paginatedAffiliates(dto);
   }
 
   @Get(':affiliate_code')

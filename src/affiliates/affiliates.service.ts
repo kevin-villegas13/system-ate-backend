@@ -69,7 +69,7 @@ export class AffiliatesService {
     };
   }
 
-  async getAllAffiliates(
+  async paginatedAffiliates(
     paginationDto: PaginationAffiliatesDto,
   ): Promise<ResponseList<SafeAffiliate>> {
     const {

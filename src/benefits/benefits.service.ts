@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { Benefit } from './entities/benefit.entity';
 import { BenefitType } from './entities/benefit-types.entity';
 import { CreateBenefitDto } from './dto/create-benefit.dto';
 import { Response } from '../common/response/response.type';
-import { BadRequest, NotFound } from '../common/exceptions';
+import { BadRequest, Conflict, NotFound } from '../common/exceptions';
 import { UpdateBenefitDto } from './dto/update-benefit.dto';
 import { UpdateBenefitStatusDto } from './dto/update-benefit-status.dto';
 import { CreateBenefitTypeDto } from './dto/create-benefit-type.dto';
+import { PaginationBenefitsDto } from './dto/paginador-benefits.dto';
+import {
+  ResponseList,
+  SortOrder,
+} from '../common/paginator/type/paginator.interface';
+import { Paginator } from '../common/paginator/paginator.helper';
+import { SafeBenefit } from './interface/safe-benefit.type';
+import { omit } from 'lodash';
 
 @Injectable()
 export class BenefitsService {
@@ -95,6 +103,75 @@ export class BenefitsService {
       status: true,
       data: null,
       message: 'Benefit updated successfully',
+    };
+  }
+
+  async paginateBenefits(
+    paginationDto: PaginationBenefitsDto,
+  ): Promise<ResponseList<SafeBenefit>> {
+    const {
+      page,
+      limit,
+      search,
+      order = SortOrder.ASC,
+      type_id,
+      is_available,
+      age_range,
+    } = paginationDto;
+
+    const currentPage = Math.max(1, page);
+    const currentLimit = Math.max(1, limit);
+
+    const where: FindOptionsWhere<Benefit> = {
+      ...(search ? { name: ILike(`%${search}%`) } : {}),
+      ...(type_id ? { type: { id: type_id } } : {}),
+      ...(typeof is_available === 'boolean'
+        ? { isAvailable: is_available }
+        : { isAvailable: true }),
+      ...(age_range ? { ageRange: age_range } : {}),
+    };
+
+    const [data, count] = await this.benefitRepository.findAndCount({
+      where,
+      relations: ['type'],
+      order: { name: order },
+      skip: (currentPage - 1) * currentLimit,
+      take: currentLimit,
+    });
+
+    const cleanData: SafeBenefit[] = data.map((benefit) => ({
+      ...omit(benefit, ['createdAt', 'updatedAt']),
+      type: benefit.type
+        ? { id: benefit.type.id, typeName: benefit.type.typeName }
+        : { id: 0, typeName: '' },
+    }));
+
+    return Paginator.Format(
+      cleanData,
+      count,
+      currentPage,
+      currentLimit,
+      search,
+      order,
+    );
+  }
+
+  async findOneBenefit(id: string): Promise<Response<Benefit>> {
+    const benefit = await this.benefitRepository.findOne({
+      where: {
+        id: id,
+      },
+      relations: ['type'],
+    });
+
+    if (!benefit) throw new Conflict('Beneficio no encontrado');
+
+    const cleanBenefit = omit(benefit, ['createdAt', 'updatedAt']) as Benefit;
+
+    return {
+      status: true,
+      message: '',
+      data: cleanBenefit,
     };
   }
 

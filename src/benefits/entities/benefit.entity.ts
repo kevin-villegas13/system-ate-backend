@@ -19,4 +19,7 @@ export class Benefit extends BaseEntity {
 
   @Column({ name: 'is_available', default: true })
   isAvailable: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
 }
