@@ -170,7 +170,7 @@ export class BenefitsService {
 
     return {
       status: true,
-      message: '',
+      message: 'Beneficio encontrado exitosamente',
       data: cleanBenefit,
     };
   }

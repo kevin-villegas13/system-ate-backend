@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DelegateBenefit } from '../delegates/entities/delegate-benefit.entity';
+import { DelegateBenefit } from './entities/delegate-benefit.entity';
 import { Delegate } from '../delegates/entities/delegate.entity';
 import { AssignBenefitDto } from './dto/assign-benefit.dto';
 import { Response } from '../common/response/response.type';
@@ -69,10 +69,9 @@ export class DelegateAssignmentsService {
     updateDto: UpdateDelegateAssignmentDto,
   ): Promise<Response<DelegateBenefit>> {
     return await this.dataSource.transaction(async (manager) => {
-      const assignment = await this.delegateBenefitRepository.findOne({
+      const assignment = await manager.findOne(DelegateBenefit, {
         where: { id },
         relations: ['benefit'],
-        lock: { mode: 'pessimistic_write' }, 
       });
 
       if (!assignment) throw new NotFound('La asignación no existe.');
@@ -84,15 +83,11 @@ export class DelegateAssignmentsService {
       const difference = newQuantity - currentQuantity;
 
       // Si se aumenta, revisar el stock disponible
-      if (difference > 0) {
+      if (difference > 0 && benefit.stock < difference)
+        throw new BadRequest('Stock insuficiente para la actualización.');
 
-        if (benefit.stock < difference)
-          throw new BadRequest('Stock insuficiente para la actualización.');
-
-        benefit.stock -= difference; 
-      }
-
-      // Si se reduce, devolver al stock
+      // Actualizar el stock
+      if (difference > 0) benefit.stock -= difference;
       if (difference < 0) benefit.stock += Math.abs(difference);
 
       await manager.save(benefit);
@@ -100,14 +95,10 @@ export class DelegateAssignmentsService {
       // Actualizar la asignación
       await manager.update(DelegateBenefit, id, updateDto);
 
-      const updatedAssignment = await this.delegateBenefitRepository.findOneBy({
-        id,
-      });
-
       return {
         status: true,
         message: 'Asignación actualizada con éxito.',
-        data: updatedAssignment,
+        data: null,
       };
     });
   }
@@ -117,7 +108,6 @@ export class DelegateAssignmentsService {
       const assignment = await this.delegateBenefitRepository.findOne({
         where: { id },
         relations: ['benefit'],
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!assignment) throw new NotFound('La asignación no existe.');

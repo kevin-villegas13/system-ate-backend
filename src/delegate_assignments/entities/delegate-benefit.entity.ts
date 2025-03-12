@@ -1,5 +1,5 @@
 import { Benefit } from '../../benefits/entities/benefit.entity';
-import { Delegate } from './delegate.entity';
+import { Delegate } from '../../delegates/entities/delegate.entity';
 import {
   Column,
   CreateDateColumn,
