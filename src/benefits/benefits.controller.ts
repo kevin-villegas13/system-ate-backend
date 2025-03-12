@@ -12,7 +12,6 @@ import {
 import { BenefitsService } from './benefits.service';
 import { CreateBenefitDto } from './dto/create-benefit.dto';
 import { UpdateBenefitDto } from './dto/update-benefit.dto';
-import { AssignBenefitDto } from './dto/assign-benefit.dto';
 import { UpdateBenefitStatusDto } from './dto/update-benefit-status.dto';
 import { CreateBenefitTypeDto } from './dto/create-benefit-type.dto';
 
@@ -32,11 +31,8 @@ export class BenefitsController {
     return this.benefitsService.createBenefitType(dto);
   }
 
-  @Post('assign')
-  @HttpCode(HttpStatus.CREATED)
-  assignBenefit(@Body() dto: AssignBenefitDto) {
-    return this.benefitsService.assignBenefitToDelegate(dto);
-  }
+  
+
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
@@ -48,5 +44,11 @@ export class BenefitsController {
   @HttpCode(HttpStatus.OK)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateBenefitStatusDto) {
     return this.benefitsService.updateBenefitStatus(id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  deleteBenefit(@Param('id') id: string) {
+    return this.benefitsService.deleteBenefit(id);
   }
 }

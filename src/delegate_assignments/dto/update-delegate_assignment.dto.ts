@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateDelegateAssignmentDto } from './create-delegate_assignment.dto';
+import { IsInt, Min, IsOptional } from 'class-validator';
 
-export class UpdateDelegateAssignmentDto extends PartialType(CreateDelegateAssignmentDto) {}
+export class UpdateDelegateAssignmentDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1, { message: 'La cantidad debe ser al menos 1.' })
+  quantity?: number;
+}

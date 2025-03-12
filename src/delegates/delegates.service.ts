@@ -153,6 +153,15 @@ export class DelegatesService {
     };
   }
 
+  async deactivate(id: string): Promise<Response<null>> {
+    await this.delegateRepository.update(id, { isActive: false });
+    return {
+      status: true,
+      message: 'Delegado desactivado correctamente.',
+      data: null,
+    };
+  }
+
   async remove(id: string): Promise<Response<null>> {
     const existingDelegate = await this.delegateRepository.findOne({
       where: { id },

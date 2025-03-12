@@ -1,15 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Benefit } from './entities/benefit.entity';
 import { BenefitType } from './entities/benefit-types.entity';
-import { DelegateBenefit } from '../delegates/entities/delegate-benefit.entity';
-import { Delegate } from '../delegates/entities/delegate.entity';
 import { CreateBenefitDto } from './dto/create-benefit.dto';
 import { Response } from '../common/response/response.type';
 import { BadRequest, NotFound } from '../common/exceptions';
 import { UpdateBenefitDto } from './dto/update-benefit.dto';
-import { AssignBenefitDto } from './dto/assign-benefit.dto';
 import { UpdateBenefitStatusDto } from './dto/update-benefit-status.dto';
 import { CreateBenefitTypeDto } from './dto/create-benefit-type.dto';
 
@@ -20,11 +17,6 @@ export class BenefitsService {
     private readonly benefitRepository: Repository<Benefit>,
     @InjectRepository(BenefitType)
     private readonly typeRepoRepository: Repository<BenefitType>,
-    @InjectRepository(DelegateBenefit)
-    private readonly delegateBenefitRepository: Repository<DelegateBenefit>,
-    @InjectRepository(Delegate)
-    private readonly delegateRepository: Repository<Delegate>,
-    private readonly dataSource: DataSource,
   ) {}
 
   async create(createBenefitDto: CreateBenefitDto): Promise<Response<null>> {
@@ -106,7 +98,7 @@ export class BenefitsService {
     };
   }
 
-  async deleteBenefit(id: number): Promise<Response<null>> {
+  async deleteBenefit(id: string): Promise<Response<null>> {
     const { affected } = await this.benefitRepository.delete(id);
 
     if (!affected) throw new NotFound('Beneficio no encontrado');
@@ -116,49 +108,6 @@ export class BenefitsService {
       data: null,
       message: 'Benefit deleted successfully',
     };
-  }
-
-  async assignBenefitToDelegate(
-    assignBenefitDto: AssignBenefitDto,
-  ): Promise<Response<null>> {
-    const { benefitId, delegateId, quantity } = assignBenefitDto;
-
-    const [benefit, delegate] = await Promise.all([
-      this.benefitRepository.findOne({ where: { id: benefitId } }),
-      this.delegateRepository.findOne({ where: { id: delegateId } }),
-    ]);
-
-    if (!benefit) throw new NotFound('El beneficio no existe.');
-
-    if (!benefit.isAvailable)
-      throw new BadRequest('El beneficio no está disponible.');
-
-    if (benefit.stock < quantity)
-      throw new BadRequest('No hay suficiente stock disponible.');
-
-    if (!delegate) throw new NotFound('El delegado no fue encontrado.');
-
-    return await this.dataSource.transaction(async (manager) => {
-      // Actualizar el stock
-      benefit.stock -= quantity;
-      await manager.save(benefit);
-
-      // Crear la asignación
-      const assignment = this.delegateBenefitRepository.create({
-        benefit,
-        delegate,
-        quantity,
-        assignmentDate: new Date(),
-      });
-
-      await manager.save(assignment);
-
-      return {
-        status: true,
-        message: 'Beneficio asignado con éxito',
-        data: null,
-      };
-    });
   }
 
   async updateBenefitStatus(

@@ -50,6 +50,12 @@ export class DelegatesController {
     return this.delegatesService.update(id, updateDelegateDto);
   }
 
+  @Patch(':id/desactive')
+  @HttpCode(HttpStatus.OK)
+  desactive(@Param('id') id: string) {
+    return this.delegatesService.deactivate(id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   remove(@Param('id') id: string) {
