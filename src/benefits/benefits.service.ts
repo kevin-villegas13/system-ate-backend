@@ -11,6 +11,7 @@ import { BadRequest, NotFound } from '../common/exceptions';
 import { UpdateBenefitDto } from './dto/update-benefit.dto';
 import { AssignBenefitDto } from './dto/assign-benefit.dto';
 import { UpdateBenefitStatusDto } from './dto/update-benefit-status.dto';
+import { CreateBenefitTypeDto } from './dto/create-benefit-type.dto';
 
 @Injectable()
 export class BenefitsService {
@@ -27,21 +28,26 @@ export class BenefitsService {
   ) {}
 
   async create(createBenefitDto: CreateBenefitDto): Promise<Response<null>> {
-    const { typeId, ...dataBenefit } = createBenefitDto;
+    const { typeId, name, ...dataBenefit } = createBenefitDto;
 
-    const type = await this.typeRepoRepository.findOne({
-      where: {
-        id: typeId,
-      },
-    });
+    const [type, existingBenefit] = await Promise.all([
+      this.typeRepoRepository.findOne({ where: { id: typeId } }),
+      this.benefitRepository.findOne({
+        where: { name, type: { id: typeId } },
+      }),
+    ]);
 
     if (!type) throw new NotFound('Tipo de beneficio no encontrado');
 
     if (dataBenefit.stock < 0)
       throw new BadRequest('El stock no puede ser negativo');
 
+    if (existingBenefit)
+      throw new BadRequest('Ya existe un beneficio con este nombre y tipo');
+
     const newBenefit = this.benefitRepository.create({
       ...dataBenefit,
+      name,
       type,
     });
 
@@ -50,7 +56,27 @@ export class BenefitsService {
     return {
       status: true,
       data: null,
-      message: 'Benefit created successfully',
+      message: 'Beneficio creado exitosamente',
+    };
+  }
+
+  async createBenefitType(
+    createBenefitTypeDto: CreateBenefitTypeDto,
+  ): Promise<Response<null>> {
+    const { typeName } = createBenefitTypeDto;
+
+    const exists = await this.typeRepoRepository.findOne({
+      where: { typeName: typeName },
+    });
+
+    if (exists) throw new BadRequest('Este tipo de beneficio ya existe.');
+
+    const benefitType = this.typeRepoRepository.create(createBenefitTypeDto);
+    const savedType = await this.typeRepoRepository.save(benefitType);
+    return {
+      status: true,
+      message: 'Benefit type created successfully',
+      data: null,
     };
   }
 

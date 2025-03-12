@@ -31,7 +31,6 @@ export class AffiliatesController {
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAffiliates(@Query() paginationDto: PaginationAffiliatesDto) {
-    console.log(paginationDto);
     return this.affiliatesService.getAllAffiliates(paginationDto);
   }
 
