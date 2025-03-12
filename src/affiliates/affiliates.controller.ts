@@ -19,17 +19,13 @@ import { User } from 'src/user/entities/user.entity';
 import { UpdateAffiliateDto } from './dto/update-affiliate.dto';
 
 @Controller('affiliates')
-@AuthDecorator()
 export class AffiliatesController {
   constructor(private readonly affiliatesService: AffiliatesService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() createAffiliateDto: CreateAffiliateDto,
-    @GetUser() user: User,
-  ) {
-    return this.affiliatesService.create(createAffiliateDto, user?.id);
+  async create(@Body() dto: CreateAffiliateDto, @GetUser() user: User) {
+    return this.affiliatesService.create(dto, user?.id);
   }
 
   @Get()
@@ -49,11 +45,8 @@ export class AffiliatesController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  async update(
-    @Param('id') id: string,
-    @Body() updateAffiliateDto: UpdateAffiliateDto,
-  ) {
-    return this.affiliatesService.update(id, updateAffiliateDto);
+  async update(@Param('id') id: string, @Body() dto: UpdateAffiliateDto) {
+    return this.affiliatesService.update(id, dto);
   }
 
   @Delete(':id')

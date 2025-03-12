@@ -1,7 +1,8 @@
 import { Benefit } from '../../benefits/entities/benefit.entity';
-import { Delegate } from '../../delegates/entities/delegate.entity';
+import { Delegate } from './delegate.entity';
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -26,4 +27,7 @@ export class DelegateBenefit {
 
   @Column({ name: 'assignment_date', type: 'timestamp', nullable: true })
   assignmentDate: Date;
+
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
+  createdAt: Date;
 }
