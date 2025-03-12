@@ -12,6 +12,8 @@ import {
   SortOrder,
 } from '../common/paginator/type/paginator.interface';
 import { Paginator } from '../common/paginator/paginator.helper';
+import { omit } from 'lodash';
+import { SafeDelegate } from './interfaces/safe-delegates.type';
 
 @Injectable()
 export class DelegatesService {
@@ -24,7 +26,7 @@ export class DelegatesService {
     createDelegateDto: CreateDelegateDto,
     userId: string,
   ): Promise<Response<null>> {
-    const { dni } = createDelegateDto;
+    const { dni, sectorId } = createDelegateDto;
 
     const existingDelegate = await this.delegateRepository.findOne({
       where: { dni: dni },
@@ -35,6 +37,7 @@ export class DelegatesService {
 
     const delegate = this.delegateRepository.create({
       ...createDelegateDto,
+      sector: { id: sectorId },
       user: { id: userId },
     });
 
@@ -49,10 +52,10 @@ export class DelegatesService {
 
   async paginateDelegates(
     paginationDto: PaginationDelegatesDto,
-  ): Promise<ResponseList<Delegate>> {
+  ): Promise<ResponseList<SafeDelegate>> {
     const {
-      page = 1,
-      limit = 10,
+      page,
+      limit,
       search,
       order = SortOrder.ASC,
       sectorId,
@@ -63,11 +66,9 @@ export class DelegatesService {
 
     const where: FindOptionsWhere<Delegate> = {
       ...(sectorId && { sector: { id: sectorId } }),
-      ...(search && [
-        { firstName: ILike(`%${search}%`) },
-        { lastName: ILike(`%${search}%`) },
-        { dni: ILike(`%${search}%`) },
-      ]),
+      ...(search && {
+        firstName: ILike(`%${search}%`),
+      }),
     };
 
     const [data, count] = await this.delegateRepository.findAndCount({
@@ -78,8 +79,15 @@ export class DelegatesService {
       take: currentLimit,
     });
 
+    const cleanData = data.map((delegate) => ({
+      ...omit(delegate, ['createdAt', 'updatedAt']),
+      sector: delegate.sector
+        ? omit(delegate.sector, ['createdAt', 'updatedAt'])
+        : undefined,
+    }));
+
     return Paginator.Format(
-      data,
+      cleanData,
       count,
       currentPage,
       currentLimit,
@@ -91,16 +99,23 @@ export class DelegatesService {
   async findOne(id: string): Promise<Response<Delegate>> {
     const delegate = await this.delegateRepository.findOne({
       where: { id },
-      relations: ['sector', 'user'],
+      relations: ['sector'],
     });
 
     if (!delegate)
       throw new NotFound(`No se encontró un delegado con el ID ${id}.`);
 
+    const sanitizedDelegate = {
+      ...omit(delegate, ['createdAt', 'updatedAt']),
+      sector: delegate.sector
+        ? omit(delegate.sector, ['sectorCode', 'createdAt', 'updatedAt'])
+        : undefined,
+    } as Delegate;
+
     return {
       status: true,
       message: 'Delegado encontrado.',
-      data: delegate,
+      data: sanitizedDelegate,
     };
   }
 
