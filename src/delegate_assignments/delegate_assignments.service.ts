@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DelegateBenefit } from './entities/delegate-benefit.entity';
 import { Delegate } from '../delegates/entities/delegate.entity';
@@ -8,6 +8,14 @@ import { Response } from '../common/response/response.type';
 import { Benefit } from '../benefits/entities/benefit.entity';
 import { BadRequest, NotFound } from '../common/exceptions';
 import { UpdateDelegateAssignmentDto } from './dto/update-delegate_assignment.dto';
+import { PaginationDelegateBenefitsDto } from './dto/pagination-delegate_assignments.dto';
+import { Paginator } from 'src/common/paginator/paginator.helper';
+import {
+  ResponseList,
+  SortOrder,
+} from '../common/paginator/type/paginator.interface';
+import { SafeDelegateAssignments } from './interfaces/safe-delegate_assignments.type';
+import { omit } from 'lodash';
 
 @Injectable()
 export class DelegateAssignmentsService {
@@ -31,30 +39,29 @@ export class DelegateAssignmentsService {
       this.delegateRepository.findOne({ where: { id: delegateId } }),
     ]);
 
-    if (!benefit) throw new NotFound('El beneficio no existe.');
+    if (!benefit || !delegate)
+      throw new NotFound('Beneficio o delegado no encontrado.');
+    if (!benefit.isAvailable || benefit.stock < quantity)
+      throw new BadRequest('Beneficio no disponible o sin stock.');
 
-    if (!benefit.isAvailable)
-      throw new BadRequest('El beneficio no está disponible.');
-
-    if (benefit.stock < quantity)
-      throw new BadRequest('No hay suficiente stock disponible.');
-
-    if (!delegate) throw new NotFound('El delegado no fue encontrado.');
-
-    return await this.dataSource.transaction(async (manager) => {
-      // Actualizar el stock
+    return this.dataSource.transaction(async (manager) => {
       benefit.stock -= quantity;
       await manager.save(benefit);
 
-      // Crear la asignación
-      const assignment = this.delegateBenefitRepository.create({
-        benefit,
-        delegate,
-        quantity,
-        assignmentDate: new Date(),
+      const existingAssignment = await manager.findOneBy(DelegateBenefit, {
+        benefit: { id: benefitId },
+        delegate: { id: delegateId },
       });
 
-      await manager.save(assignment);
+      const assignment = existingAssignment
+        ? {
+            ...existingAssignment,
+            quantity: existingAssignment.quantity + quantity,
+            assignmentDate: new Date(),
+          }
+        : { benefit, delegate, quantity, assignmentDate: new Date() };
+
+      await manager.save(DelegateBenefit, assignment);
 
       return {
         status: true,
@@ -127,10 +134,48 @@ export class DelegateAssignmentsService {
     });
   }
 
-  async getHistoryByDelegate(delegateId: string): Promise<DelegateBenefit[]> {
-    return this.delegateBenefitRepository.find({
-      where: { delegate: { id: delegateId } },
+  async getHistoryByDelegate(
+    paginationDto: PaginationDelegateBenefitsDto,
+  ): Promise<ResponseList<SafeDelegateAssignments>> {
+    const {
+      page,
+      limit,
+      delegateId,
+      order = SortOrder.ASC,
+      search,
+    } = paginationDto;
+
+    // Asegurar valores válidos para paginación
+    const currentPage = Math.max(1, page);
+    const currentLimit = Math.max(1, limit);
+
+    const where: FindOptionsWhere<DelegateBenefit> = {
+      ...(delegateId ? { delegate: { id: delegateId } } : {}),
+      ...(search ? { benefit: { name: ILike(`%${search}%`) } } : {}),
+    };
+
+    const [data, count] = await this.delegateBenefitRepository.findAndCount({
+      where,
       relations: ['benefit', 'delegate'],
+      order: { benefit: { name: order.toUpperCase() as 'ASC' | 'DESC' } },
+      skip: (currentPage - 1) * currentLimit,
+      take: currentLimit,
     });
+
+    const cleanData = data.map(({ benefit, delegate, ...rest }) => ({
+      ...omit(rest, ['createdAt', 'updatedAt']),
+      ...omit(benefit, ['createdAt', 'updatedAt']),
+      benefit: omit(benefit, ['createdAt', 'updatedAt']),
+      delegate: omit(delegate, ['createdAt', 'updatedAt']),
+    }));
+
+    return Paginator.Format(
+      cleanData,
+      count,
+      currentPage,
+      currentLimit,
+      search,
+      order,
+    );
   }
 }
