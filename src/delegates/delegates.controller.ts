@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Put,
 } from '@nestjs/common';
 import { DelegatesService } from './delegates.service';
 import { CreateDelegateDto } from './dto/create-delegate.dto';
@@ -17,6 +18,7 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { PaginationDelegatesDto } from './dto/paginador-delegatedto';
 import { AuthDecorator } from 'src/common/decorators/jwt.decorator';
+import { UpdateDelegateStatusDto } from './dto/update-delegate-status.dto';
 
 @Controller('delegates')
 @AuthDecorator()
@@ -50,10 +52,10 @@ export class DelegatesController {
     return this.delegatesService.update(id, updateDelegateDto);
   }
 
-  @Patch(':id/desactive')
+  @Put(':id/desactive')
   @HttpCode(HttpStatus.OK)
-  desactive(@Param('id') id: string) {
-    return this.delegatesService.deactivate(id);
+  desactive(@Param('id') id: string, @Body() dto: UpdateDelegateStatusDto) {
+    return this.delegatesService.deactivate(id, dto);
   }
 
   @Delete(':id')

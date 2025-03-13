@@ -14,6 +14,7 @@ import {
 import { Paginator } from '../common/paginator/paginator.helper';
 import { omit } from 'lodash';
 import { SafeDelegate } from './interfaces/safe-delegates.type';
+import { UpdateDelegateStatusDto } from './dto/update-delegate-status.dto';
 
 @Injectable()
 export class DelegatesService {
@@ -153,8 +154,21 @@ export class DelegatesService {
     };
   }
 
-  async deactivate(id: string): Promise<Response<null>> {
-    await this.delegateRepository.update(id, { isActive: false });
+  async deactivate(
+    id: string,
+    updateDelegateStatusDto: UpdateDelegateStatusDto,
+  ): Promise<Response<null>> {
+    const { is_active } = updateDelegateStatusDto;
+
+    const delegate = await this.delegateRepository.findOne({
+      where: { id: id },
+    });
+
+    if (!delegate) throw new NotFound('Delegado no encontrado');
+
+    delegate.isActive = is_active;
+
+    await this.delegateRepository.save(delegate);
     return {
       status: true,
       message: 'Delegado desactivado correctamente.',
