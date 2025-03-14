@@ -26,8 +26,10 @@ export class ChildrenService {
   constructor(
     @InjectRepository(Child)
     private readonly childRepository: Repository<Child>,
+
     @InjectRepository(Affiliate)
     private readonly affiliateRepository: Repository<Affiliate>,
+
     @InjectRepository(Gender)
     private readonly genderRepository: Repository<Gender>,
   ) {}

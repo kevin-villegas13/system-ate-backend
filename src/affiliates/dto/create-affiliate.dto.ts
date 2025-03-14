@@ -10,6 +10,8 @@ import {
   Matches,
   MinDate,
   IsInt,
+  MaxDate,
+  ValidateIf,
 } from 'class-validator';
 
 import { Transform } from 'class-transformer';
@@ -78,12 +80,12 @@ export class CreateAffiliateDto {
   @Transform(({ value }) => value === 'true')
   hasDisability?: boolean;
 
-  @IsNotEmpty()
-  @IsDateString({}, { message: 'La fecha de nacimiento debe ser válida.' })
-  @MinDate(new Date(), {
-    message: 'La fecha de nacimiento no puede ser futura.',
+  @IsNotEmpty({ message: 'La fecha de nacimiento es obligatoria.' })
+  @IsDateString({}, { message: 'Formato inválido. Usa YYYY-MM-DD.' })
+  @ValidateIf((_, value) => value <= new Date().toISOString().split('T')[0], {
+    message: 'La fecha no puede ser futura.',
   })
-  birthdate: Date;
+  birthdate: string;
 
   @IsOptional()
   @IsString({ message: 'La dirección debe ser un texto.' })

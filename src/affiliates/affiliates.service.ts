@@ -23,10 +23,13 @@ export class AffiliatesService {
   constructor(
     @InjectRepository(Affiliate)
     private readonly affiliateRepository: Repository<Affiliate>,
+
     @InjectRepository(Gender)
     private readonly genderRepository: Repository<Gender>,
+
     @InjectRepository(Sector)
     private readonly sectorRepository: Repository<Sector>,
+
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}

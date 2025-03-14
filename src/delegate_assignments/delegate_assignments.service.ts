@@ -22,10 +22,13 @@ export class DelegateAssignmentsService {
   constructor(
     @InjectRepository(Benefit)
     private readonly benefitRepository: Repository<Benefit>,
+
     @InjectRepository(DelegateBenefit)
     private readonly delegateBenefitRepository: Repository<DelegateBenefit>,
+
     @InjectRepository(Delegate)
     private readonly delegateRepository: Repository<Delegate>,
+
     private readonly dataSource: DataSource,
   ) {}
 
@@ -74,7 +77,7 @@ export class DelegateAssignmentsService {
   async updateAssignment(
     id: number,
     updateDto: UpdateDelegateAssignmentDto,
-  ): Promise<Response<DelegateBenefit>> {
+  ): Promise<Response<null>> {
     return await this.dataSource.transaction(async (manager) => {
       const assignment = await manager.findOne(DelegateBenefit, {
         where: { id },

@@ -23,6 +23,7 @@ export class BenefitsService {
   constructor(
     @InjectRepository(Benefit)
     private readonly benefitRepository: Repository<Benefit>,
+
     @InjectRepository(BenefitType)
     private readonly typeRepoRepository: Repository<BenefitType>,
   ) {}

@@ -11,7 +11,7 @@ export class BenefitDistribution extends BaseEntity {
   benefit: Benefit;
 
   @Column({ name: 'recipient_id' })
-  recipientId: number;
+  recipientId: string;
 
   @ManyToOne(() => RecipientType, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'recipient_type_id' })
@@ -20,7 +20,7 @@ export class BenefitDistribution extends BaseEntity {
   @Column({ default: 1 })
   quantity: number;
 
-  @Column({ name: 'delivery_date', type: 'timestamp', nullable: true })
+  @Column({ name: 'delivery_date', type: 'date', nullable: true })
   deliveryDate: Date;
 
   @Column({ type: 'text', nullable: true })

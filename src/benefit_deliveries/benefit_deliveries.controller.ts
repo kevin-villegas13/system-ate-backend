@@ -1,34 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { BenefitDeliveriesService } from './benefit_deliveries.service';
 import { CreateBenefitDeliveryDto } from './dto/create-benefit_delivery.dto';
 import { UpdateBenefitDeliveryDto } from './dto/update-benefit_delivery.dto';
 
 @Controller('benefit-deliveries')
 export class BenefitDeliveriesController {
-  constructor(private readonly benefitDeliveriesService: BenefitDeliveriesService) {}
+  constructor(
+    private readonly benefitDeliveriesService: BenefitDeliveriesService,
+  ) {}
 
   @Post()
-  create(@Body() createBenefitDeliveryDto: CreateBenefitDeliveryDto) {
-    return this.benefitDeliveriesService.create(createBenefitDeliveryDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.benefitDeliveriesService.findAll();
+  @HttpCode(HttpStatus.CREATED)
+  async createDistribution(@Body() dto: CreateBenefitDeliveryDto) {
+    return this.benefitDeliveriesService.createDistribution(dto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.benefitDeliveriesService.findOne(+id);
+  @HttpCode(HttpStatus.OK)
+  async getDistributionById(@Param('id') id: string) {
+    return this.benefitDeliveriesService.getDistributionById(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBenefitDeliveryDto: UpdateBenefitDeliveryDto) {
-    return this.benefitDeliveriesService.update(+id, updateBenefitDeliveryDto);
+  @HttpCode(HttpStatus.OK)
+  async updateDistribution(
+    @Param('id') id: string,
+    @Body() dto: UpdateBenefitDeliveryDto,
+  ) {
+    return this.benefitDeliveriesService.updateDistribution(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.benefitDeliveriesService.remove(+id);
+  @HttpCode(HttpStatus.OK)
+  async deleteDistribution(@Param('id') id: string) {
+    return this.benefitDeliveriesService.deleteDistribution(id);
   }
 }
