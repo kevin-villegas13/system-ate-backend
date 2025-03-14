@@ -6,6 +6,8 @@ import { BenefitDistribution } from './entities/benefit_delivery.entity';
 import { DeliveryStatus } from '../delivery/entities/delivery.entity';
 import { RecipientType } from '../recipient/entities/recipient.entity';
 import { DelegateBenefit } from '../delegate_assignments/entities/delegate-benefit.entity';
+import { Affiliate } from '../affiliates/entities/affiliate.entity';
+import { Child } from '../children/entities/child.entity';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { DelegateBenefit } from '../delegate_assignments/entities/delegate-benef
       DeliveryStatus,
       RecipientType,
       DelegateBenefit,
+      Affiliate,
+      Child,
     ]),
   ],
   controllers: [BenefitDeliveriesController],

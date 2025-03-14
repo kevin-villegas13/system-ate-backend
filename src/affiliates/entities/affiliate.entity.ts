@@ -11,6 +11,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { BenefitDistribution } from '../../benefit_deliveries/entities/benefit_delivery.entity';
 
 @Entity('affiliates')
 export class Affiliate extends BaseEntity {
@@ -60,4 +61,10 @@ export class Affiliate extends BaseEntity {
 
   @Column({ nullable: true, length: 200 })
   address: string;
+
+  @OneToMany(
+    () => BenefitDistribution,
+    (benefitDistribution) => benefitDistribution.affiliate,
+  )
+  benefitDistributions: BenefitDistribution[];
 }

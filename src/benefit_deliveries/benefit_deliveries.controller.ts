@@ -8,10 +8,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { BenefitDeliveriesService } from './benefit_deliveries.service';
 import { CreateBenefitDeliveryDto } from './dto/create-benefit_delivery.dto';
 import { UpdateBenefitDeliveryDto } from './dto/update-benefit_delivery.dto';
+import { PaginationBenefitDeliveryDto } from './dto/paginador-benefit_delivery.dto';
 
 @Controller('benefit-deliveries')
 export class BenefitDeliveriesController {
@@ -23,6 +25,13 @@ export class BenefitDeliveriesController {
   @HttpCode(HttpStatus.CREATED)
   async createDistribution(@Body() dto: CreateBenefitDeliveryDto) {
     return this.benefitDeliveriesService.createDistribution(dto);
+  }
+
+  @Get()
+  async paginateBenefitDistribution(
+    @Query() dto: PaginationBenefitDeliveryDto,
+  ) {
+    return this.benefitDeliveriesService.paginateBenefitDistribution(dto);
   }
 
   @Get(':id')

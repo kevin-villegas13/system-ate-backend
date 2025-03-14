@@ -1,17 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { BenefitDistribution } from './entities/benefit_delivery.entity';
 import { BadRequest, NotFound } from '../common/exceptions';
-import { Benefit } from '../benefits/entities/benefit.entity';
 import { CreateBenefitDeliveryDto } from './dto/create-benefit_delivery.dto';
 import { DeliveryStatus } from '../delivery/entities/delivery.entity';
 import { Response } from '../common/response/response.type';
-import { RecipientType } from 'src/recipient/entities/recipient.entity';
-import { DelegateBenefit } from 'src/delegate_assignments/entities/delegate-benefit.entity';
+import { RecipientType } from '../recipient/entities/recipient.entity';
+import { DelegateBenefit } from '../delegate_assignments/entities/delegate-benefit.entity';
 import { UpdateBenefitDeliveryDto } from './dto/update-benefit_delivery.dto';
 import { omit } from 'lodash';
-import { SafeBenefitDistribution } from './interfaces/safe-benefit_deliveries.type';
+import {
+  SafeAffiliate,
+  SafeBenefit,
+  SafeBenefitDistribution,
+  SafeChild,
+  SafeDelegate,
+} from './interfaces/safe-benefit_deliveries.type';
+import { PaginationBenefitDeliveryDto } from './dto/paginador-benefit_delivery.dto';
+import {
+  ResponseList,
+  SortOrder,
+} from '../common/paginator/type/paginator.interface';
+import { Paginator } from '../common/paginator/paginator.helper';
+import { Affiliate } from '../affiliates/entities/affiliate.entity';
+import { Child } from '../children/entities/child.entity';
 
 @Injectable()
 export class BenefitDeliveriesService {
@@ -28,6 +41,12 @@ export class BenefitDeliveriesService {
     @InjectRepository(DelegateBenefit)
     private readonly delegateBenefitRepository: Repository<DelegateBenefit>,
 
+    @InjectRepository(Affiliate)
+    private readonly affiliateRepository: Repository<Affiliate>,
+
+    @InjectRepository(Child)
+    private readonly childRepository: Repository<Child>,
+
     private readonly dataSource: DataSource,
   ) {}
   private readonly takeStates = [1, 2, 3]; // Reducen el stock
@@ -38,76 +57,97 @@ export class BenefitDeliveriesService {
   ): Promise<Response<null>> {
     const { benefitId, recipientId, recipientType, statusId, quantity } = dto;
 
-    // Obtener las entidades necesarias
-    const [status, delegateBenefit, recipientTypeEntity, existingDistribution] =
-      await Promise.all([
-        this.deliveryRepository.findOne({ where: { id: statusId } }),
-        this.delegateBenefitRepository.findOne({
-          where: { benefit: { id: benefitId } },
-          relations: ['delegate', 'benefit'],
-        }),
-        this.recipientTypeRepository.findOne({ where: { id: recipientType } }),
-        this.distributionRepository.findOne({
-          where: {
-            benefit: { id: benefitId },
-            recipientId,
-            recipientType: { id: recipientType },
-          },
-        }),
-      ]);
+    const [
+      status,
+      delegateBenefit,
+      recipientTypeEntity,
+      existingDistribution,
+      recipient,
+    ] = await Promise.all([
+      this.deliveryRepository.findOne({ where: { id: statusId } }),
+      this.delegateBenefitRepository.findOne({
+        where: { benefit: { id: benefitId } },
+        relations: ['delegate', 'benefit'],
+      }),
+      this.recipientTypeRepository.findOne({ where: { id: recipientType } }),
+      this.distributionRepository.findOne({
+        where: {
+          benefit: { id: benefitId },
+          recipientType: { id: recipientType },
+          ...(recipientType === 1
+            ? { affiliate: { id: recipientId } }
+            : { child: { id: recipientId } }),
+        },
+      }),
+      recipientType === 1
+        ? this.affiliateRepository.findOne({ where: { id: recipientId } })
+        : this.childRepository.findOne({
+            where: { id: recipientId },
+            relations: ['affiliate'],
+          }),
+    ]);
 
-    // Validaciones
-    if (!status) throw new NotFound('El estado de distribución no existe.');
-    if (!delegateBenefit)
-      throw new NotFound('No hay stock asignado para este beneficio.');
+    // Validaciones esenciales
+    if (!status) throw new NotFound('Estado no encontrado.');
+    if (!delegateBenefit) throw new NotFound('No hay unidades disponibles.');
     if (!recipientTypeEntity)
-      throw new NotFound('El tipo de recipiente no existe.');
-    if (existingDistribution)
-      throw new BadRequest(
-        'Este destinatario ya tiene una distribución para este beneficio.',
+      throw new NotFound('Tipo de destinatario inválido.');
+    if (existingDistribution) throw new BadRequest('Beneficio ya entregado.');
+    if (!recipient) {
+      throw new NotFound(
+        `No encontramos al ${recipientType === 1 ? 'afiliado' : 'niño'}.`,
       );
+    }
 
-    // Validación de stock insuficiente si el estado lo requiere
+    // Validar afiliado si el destinatario es un niño
+    const affiliate =
+      recipientType === 1
+        ? { id: recipientId }
+        : { id: (recipient as Child).affiliate?.id };
+
+    if (recipientType !== 1 && !affiliate.id)
+      throw new BadRequest('El niño no tiene un afiliado asociado.');
+
+    // Validar stock si se requiere
     if (
       this.takeStates.includes(status.id) &&
       delegateBenefit.quantity < quantity
-    ) {
+    )
       throw new BadRequest(
-        `Stock insuficiente. Disponible: ${delegateBenefit.quantity}`,
+        `Stock insuficiente. Disponible: ${delegateBenefit.quantity} unidades.`,
       );
-    }
 
-    // Definir el mensaje de éxito y otros posibles estados
-    let message = 'Distribución creada con éxito.';
+    // Actualizar cantidad si aplica
+    if (this.takeStates.includes(status.id))
+      delegateBenefit.quantity -= quantity;
+
+    // Ajustar cantidad y mensaje según el estado
+    if (this.giveStates.includes(status.id)) dto.quantity = 0;
+
     const statusMessages: Record<number, string> = {
-      4: 'La distribución ha fallado, el stock ha sido restablecido a 0 debido a un error en el proceso.',
-      5: 'La distribución ha sido cancelada, el stock ha sido restablecido a 0.',
-      6: 'La distribución está retrasada, el stock ha sido restablecido a 0 hasta que se resuelva el retraso.',
+      4: 'Hubo un problema con la entrega.',
+      5: 'La entrega fue cancelada.',
+      6: 'Entrega en espera.',
     };
 
-    if (this.takeStates.includes(status.id)) {
-      delegateBenefit.quantity -= quantity;
-    }
+    const message =
+      statusMessages[status.id] || '¡Entrega registrada con éxito!';
 
-    // Si el estado es de "dar", restablecer cantidad y actualizar el mensaje
-    if (this.giveStates.includes(status.id)) {
-      dto.quantity = 0;
-      message = statusMessages[status.id] || message;
-    }
-
+    // Transacción para guardar cambios
     return this.dataSource.transaction(async (manager) => {
       await manager.save(delegateBenefit);
 
-      // Crear y guardar la distribución
       const distribution = manager.create(BenefitDistribution, {
         ...dto,
         status: { id: statusId },
         benefit: delegateBenefit.benefit,
         recipientType: recipientTypeEntity,
+        ...(recipientType === 1
+          ? { affiliate: { id: recipientId } }
+          : { child: { id: recipientId }, affiliate }),
       });
 
       await manager.save(distribution);
-
       return { status: true, message, data: null };
     });
   }
@@ -115,15 +155,13 @@ export class BenefitDeliveriesService {
   async getDistributionById(
     id: string,
   ): Promise<Response<SafeBenefitDistribution>> {
-    // Buscar distribución
     const distribution = await this.distributionRepository.findOne({
       where: { id },
-      relations: ['status', 'recipientType', 'benefit'],
+      relations: ['status', 'recipientType', 'benefit', 'affiliate', 'child'],
     });
 
     if (!distribution) throw new NotFound('La distribución no existe.');
 
-    // Buscar el beneficio delegado
     const delegateBenefit = await this.delegateBenefitRepository.findOne({
       where: { benefit: { id: distribution.benefit.id } },
       relations: ['delegate'],
@@ -131,30 +169,63 @@ export class BenefitDeliveriesService {
 
     if (!delegateBenefit) throw new NotFound('El delegado asignado no existe.');
 
-    // Omitir propiedades no importantes de la distribución, beneficio y delegado
-    const distributionData = omit(distribution, [
-      'benefit',
-      'updatedAt',
-      'createdAt',
-    ]) as Omit<BenefitDistribution, 'benefit' | 'delegate'>;
+    // Función para asegurar un objeto SafeAffiliate válido
+    const toSafeAffiliate = (
+      affiliate: Affiliate | null,
+    ): SafeAffiliate | null => {
+      if (!affiliate) return null;
 
+      const safeAffiliate = omit(affiliate, [
+        'dni',
+        'createdAt',
+        'updatedAt',
+        'isActive',
+        'contact',
+        'address',
+        'note',
+      ]) as SafeAffiliate;
+
+      if (!safeAffiliate.id)
+        throw new Error('El ID del afiliado es obligatorio.');
+
+      return safeAffiliate;
+    };
+
+    // Función para asegurar un objeto SafeChild válido
+    const toSafeChild = (child: Child | null): SafeChild | null => {
+      if (!child) return null;
+      return omit(child, [
+        'dni',
+        'createdAt',
+        'updatedAt',
+        'note',
+      ]) as SafeChild;
+    };
+
+    const distributionData = omit(distribution, ['updatedAt', 'createdAt']);
     const benefitData = omit(distribution.benefit, [
       'createdAt',
       'updatedAt',
       'stock',
-    ]);
+    ]) as SafeBenefit;
 
     const delegateData = omit(delegateBenefit.delegate, [
       'dni',
       'createdAt',
       'updatedAt',
       'isActive',
-    ]);
+    ]) as SafeDelegate;
 
+    const affiliateData = toSafeAffiliate(distribution.affiliate);
+    const childData = toSafeChild(distribution.child!);
+
+    // Construir la respuesta segura
     const result: SafeBenefitDistribution = {
-      ...distributionData,
+      ...distribution,
       benefit: benefitData,
       delegate: delegateData,
+      affiliate: affiliateData,
+      child: childData,
     };
 
     return {
@@ -167,73 +238,96 @@ export class BenefitDeliveriesService {
   async updateDistribution(
     id: string,
     dto: UpdateBenefitDeliveryDto,
-  ): Promise<Response<BenefitDistribution>> {
+  ): Promise<Response<null>> {
     const { benefitId, recipientId, recipientType, statusId, quantity, notes } =
       dto;
 
-    const [existingDistribution, delegateBenefit, recipientTypeEntity] =
-      await Promise.all([
-        this.distributionRepository.findOne({
-          where: { id },
-          relations: ['benefit', 'status'],
-        }),
-        this.delegateBenefitRepository.findOne({
-          where: { benefit: { id: benefitId } },
-        }),
-        this.recipientTypeRepository.findOne({ where: { id: recipientType } }),
-      ]);
+    // Obtener entidades necesarias
+    const distribution = await this.distributionRepository.findOne({
+      where: { id },
+      relations: ['benefit', 'status', 'affiliate', 'child'],
+    });
 
-    // Validaciones de existencia
-    if (!existingDistribution) throw new NotFound('La distribución no existe.');
-    if (!delegateBenefit)
-      throw new NotFound('El beneficio delegado no existe.');
-    if (!recipientTypeEntity)
+    const benefit = await this.delegateBenefitRepository.findOne({
+      where: { benefit: { id: benefitId } },
+    });
+
+    const recipientTypeEntity = await this.recipientTypeRepository.findOne({
+      where: { id: recipientType },
+    });
+
+    if (!distribution || !benefit || !recipientTypeEntity) {
+      throw new NotFound('Datos no encontrados o inválidos.');
+    }
+
+    // Validar stock según estado
+    if (this.takeStates.includes(statusId!) && benefit.quantity < quantity!) {
       throw new BadRequest(
-        `El tipo de receptor con ID ${recipientType} no existe.`,
+        `Stock insuficiente. Disponible: ${benefit.quantity}.`,
       );
+    }
 
-    // Lógica de actualizaciones según el estado
-    if (statusId !== undefined) {
-      const isTakeState = this.takeStates.includes(statusId);
-      const isGiveState = this.giveStates.includes(statusId);
+    if (
+      this.giveStates.includes(statusId!) &&
+      distribution.quantity < quantity!
+    ) {
+      throw new BadRequest(
+        `Cantidad insuficiente. Disponible: ${distribution.quantity}.`,
+      );
+    }
 
-      // Verificar si es un estado de "take" y si hay suficiente stock
-      if (isTakeState) {
-        if (delegateBenefit.quantity < quantity!) {
-          throw new BadRequest(
-            `Stock insuficiente para tomar. Disponible: ${delegateBenefit.quantity}`,
-          );
-        }
-        delegateBenefit.quantity -= quantity!;
-        existingDistribution.quantity += quantity!;
-      }
+    // Ajustar stock
+    if (this.takeStates.includes(statusId!)) {
+      benefit.quantity -= quantity!;
+      distribution.quantity += quantity!;
+    }
 
-      // Verificar si es un estado de "give" y si hay suficiente stock en la distribución
-      if (isGiveState) {
-        if (existingDistribution.quantity < quantity!) {
-          throw new BadRequest(
-            `No se puede dar más de lo disponible en la distribución. Disponible: ${existingDistribution.quantity}`,
-          );
-        }
-        delegateBenefit.quantity += quantity!;
-        existingDistribution.quantity -= quantity!;
+    if (this.giveStates.includes(statusId!)) {
+      benefit.quantity += quantity!;
+      distribution.quantity -= quantity!;
+    }
+
+    // Obtener destinatario según el tipo
+    const recipient =
+      recipientType === 1
+        ? await this.affiliateRepository.findOne({ where: { id: recipientId } })
+        : await this.childRepository.findOne({ where: { id: recipientId } });
+
+    if (!recipient) {
+      throw new NotFound('El destinatario no existe.');
+    }
+
+    // Manejar afiliación si el destinatario es un niño
+    let affiliate: Affiliate | null = distribution.affiliate ?? null;
+    if (recipientType === 2 && !affiliate) {
+      affiliate = await this.affiliateRepository.findOne({
+        where: { id: recipient.id },
+      });
+
+      if (!affiliate) {
+        throw new NotFound('El niño no tiene un afiliado responsable.');
       }
     }
 
-    // Asegúrate de que las cantidades no sean negativas
-    delegateBenefit.quantity = Math.max(delegateBenefit.quantity, 0);
-    existingDistribution.quantity = Math.max(existingDistribution.quantity, 0);
+    // Actualizar destinatario y relaciones
+    distribution.child = recipientType === 2 ? (recipient as Child) : undefined;
+    distribution.affiliate =
+      recipientType === 1 ? (recipient as Affiliate) : affiliate;
 
+    // Actualizar distribución
+    Object.assign(distribution, {
+      recipientType: recipientTypeEntity,
+      status: statusId
+        ? ({ id: statusId } as DeliveryStatus)
+        : distribution.status,
+      notes,
+      quantity: Math.max(distribution.quantity, 0),
+    });
+
+    // Guardar cambios en transacción
     await this.dataSource.transaction(async (manager) => {
-      await manager.save(delegateBenefit);
-      Object.assign(existingDistribution, {
-        recipientId,
-        recipientType: recipientTypeEntity,
-        status: { id: statusId },
-        notes,
-        quantity: existingDistribution.quantity,
-      });
-      await manager.save(existingDistribution);
+      await manager.save(benefit);
+      await manager.save(distribution);
     });
 
     return {
@@ -257,15 +351,15 @@ export class BenefitDeliveriesService {
       throw new BadRequest('No se puede eliminar esta distribución.');
 
     return this.dataSource.transaction(async (manager) => {
-      // Buscar el delegateBenefit si existe
-      const delegateBenefit = await this.delegateBenefitRepository.findOne({
-        where: { benefit: { id: benefit.id } },
-      });
+      if (this.takeStates.includes(status.id)) {
+        const delegateBenefit = await this.delegateBenefitRepository.findOne({
+          where: { benefit: { id: benefit.id } },
+        });
 
-      // Restaurar stock si el estado está en takeStates
-      if (this.takeStates.includes(status.id) && delegateBenefit) {
-        delegateBenefit.quantity += quantity;
-        await manager.save(delegateBenefit);
+        if (delegateBenefit) {
+          delegateBenefit.quantity += quantity;
+          await manager.save(delegateBenefit);
+        }
       }
 
       // Eliminar la distribución
@@ -277,5 +371,117 @@ export class BenefitDeliveriesService {
         data: null,
       };
     });
+  }
+
+  async paginateBenefitDistribution(
+    paginationDto: PaginationBenefitDeliveryDto,
+  ): Promise<ResponseList<SafeBenefitDistribution>> {
+    const {
+      page,
+      limit,
+      search,
+      order = SortOrder.ASC,
+      statusId,
+      recipientType,
+    } = paginationDto;
+
+    const currentPage = Math.max(1, page);
+    const currentLimit = Math.max(1, limit);
+
+    // Filtro de búsqueda simplificado
+    const where: FindOptionsWhere<BenefitDistribution> = {
+      ...(search && {
+        [recipientType === 1 ? 'affiliate' : 'child']: {
+          name: ILike(`%${search}%`),
+        },
+      }),
+      ...(statusId && { status: { id: statusId } }),
+      ...(recipientType && { recipientType: { id: recipientType } }),
+    };
+
+    // Construcción del query con joins dinámicos
+    const queryBuilder = this.distributionRepository
+      .createQueryBuilder('distribution')
+      .leftJoinAndSelect('distribution.status', 'status')
+      .leftJoinAndSelect('distribution.benefit', 'benefit')
+      .leftJoinAndSelect('distribution.affiliate', 'affiliate')
+      .leftJoinAndSelect('distribution.child', 'child')
+      .where(where);
+
+    // Ejecutar la consulta con paginación
+    const [data, count] = await queryBuilder
+      .skip((currentPage - 1) * currentLimit)
+      .take(currentLimit)
+      .orderBy(
+        'distribution.createdAt',
+        order === SortOrder.ASC ? 'ASC' : 'DESC',
+      )
+      .getManyAndCount();
+
+    // Transformar los datos según el recipientType
+    const filteredData = data.map((distribution) => {
+      const baseData = {
+        ...distribution,
+        benefit: omit(distribution.benefit, [
+          'updatedAt',
+          'createdAt',
+        ]) as SafeBenefit,
+        delegate: {} as SafeDelegate,
+      };
+
+      if (recipientType === 1) {
+        // Solo el afiliado si es tipo 1
+        return {
+          ...baseData,
+          affiliate: distribution.affiliate
+            ? (omit(distribution.affiliate, [
+                'dni',
+                'updatedAt',
+                'createdAt',
+                'isActive',
+                'contact',
+                'address',
+                'note',
+              ]) as SafeAffiliate)
+            : null,
+          child: null,
+        };
+      } else if (recipientType === 2) {
+        // Afiliado + hijo si es tipo 2
+        return {
+          ...baseData,
+          affiliate: distribution.affiliate
+            ? (omit(distribution.affiliate, [
+                'dni',
+                'updatedAt',
+                'createdAt',
+                'isActive',
+                'contact',
+                'address',
+                'note',
+              ]) as SafeAffiliate)
+            : null,
+          child: distribution.child
+            ? (omit(distribution.child, [
+                'dni',
+                'updatedAt',
+                'createdAt',
+                'note',
+              ]) as SafeChild)
+            : null,
+        };
+      }
+
+      return baseData; // Retorno por defecto (si no hay recipientType válido)
+    }) as SafeBenefitDistribution[];
+
+    return Paginator.Format(
+      filteredData,
+      count,
+      currentPage,
+      currentLimit,
+      search,
+      order,
+    );
   }
 }

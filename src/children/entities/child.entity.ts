@@ -1,7 +1,8 @@
 import { Affiliate } from 'src/affiliates/entities/affiliate.entity';
 import { BaseEntity } from 'src/common/enities/base-entity';
 import { Gender } from '../../genders/entities/gender.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { BenefitDistribution } from '../../benefit_deliveries/entities/benefit_delivery.entity';
 
 @Entity('children')
 export class Child extends BaseEntity {
@@ -27,4 +28,10 @@ export class Child extends BaseEntity {
     onDelete: 'CASCADE',
   })
   affiliate: Affiliate;
+
+  @OneToMany(
+    () => BenefitDistribution,
+    (benefitDistribution) => benefitDistribution.child,
+  )
+  benefitDistributions: BenefitDistribution[];
 }

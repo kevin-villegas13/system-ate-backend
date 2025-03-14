@@ -7,6 +7,7 @@ import {
   IsInt,
   Matches,
   ValidateIf,
+  IsIn,
 } from 'class-validator';
 
 export class CreateBenefitDeliveryDto {
@@ -16,9 +17,14 @@ export class CreateBenefitDeliveryDto {
 
   @IsUUID('4', { message: 'Selecciona un destinatario válido.' })
   @IsNotEmpty({ message: 'El destinatario es obligatorio.' })
+  @ValidateIf((o) => o.recipientType === 1 || o.recipientType === 2)
   recipientId: string;
 
-  @IsInt({ message: 'Selecciona un tipo de destinatario válido.' })
+  @IsInt({ message: 'Por favor, selecciona un tipo de destinatario válido.' })
+  @IsIn([1, 2, 3], {
+    message:
+      'El tipo de destinatario debe ser: 1 (Afiliado), 2 (Hijo de Afiliado) o 3 (Otro).',
+  })
   @IsNotEmpty({ message: 'El tipo de destinatario es obligatorio.' })
   recipientType: number;
 
