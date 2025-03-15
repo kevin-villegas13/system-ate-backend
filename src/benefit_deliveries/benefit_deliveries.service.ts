@@ -256,25 +256,22 @@ export class BenefitDeliveriesService {
       where: { id: recipientType },
     });
 
-    if (!distribution || !benefit || !recipientTypeEntity) {
+    if (!distribution || !benefit || !recipientTypeEntity)
       throw new NotFound('Datos no encontrados o inválidos.');
-    }
 
     // Validar stock según estado
-    if (this.takeStates.includes(statusId!) && benefit.quantity < quantity!) {
+    if (this.takeStates.includes(statusId!) && benefit.quantity < quantity!)
       throw new BadRequest(
         `Stock insuficiente. Disponible: ${benefit.quantity}.`,
       );
-    }
 
     if (
       this.giveStates.includes(statusId!) &&
       distribution.quantity < quantity!
-    ) {
+    )
       throw new BadRequest(
         `Cantidad insuficiente. Disponible: ${distribution.quantity}.`,
       );
-    }
 
     // Ajustar stock
     if (this.takeStates.includes(statusId!)) {
@@ -293,9 +290,7 @@ export class BenefitDeliveriesService {
         ? await this.affiliateRepository.findOne({ where: { id: recipientId } })
         : await this.childRepository.findOne({ where: { id: recipientId } });
 
-    if (!recipient) {
-      throw new NotFound('El destinatario no existe.');
-    }
+    if (!recipient) throw new NotFound('El destinatario no existe.');
 
     // Manejar afiliación si el destinatario es un niño
     let affiliate: Affiliate | null = distribution.affiliate ?? null;
@@ -304,13 +299,14 @@ export class BenefitDeliveriesService {
         where: { id: recipient.id },
       });
 
-      if (!affiliate) {
+      if (!affiliate)
         throw new NotFound('El niño no tiene un afiliado responsable.');
-      }
     }
 
     // Actualizar destinatario y relaciones
-    distribution.child = recipientType === 2 ? (recipient as Child) : undefined;
+    distribution.child =
+      recipientType === 1 ? null : (recipient as Child | null);
+
     distribution.affiliate =
       recipientType === 1 ? (recipient as Affiliate) : affiliate;
 
@@ -388,7 +384,7 @@ export class BenefitDeliveriesService {
     const currentPage = Math.max(1, page);
     const currentLimit = Math.max(1, limit);
 
-    // Filtro de búsqueda simplificado
+    // Filtro de búsqueda
     const where: FindOptionsWhere<BenefitDistribution> = {
       ...(search && {
         [recipientType === 1 ? 'affiliate' : 'child']: {
@@ -472,7 +468,7 @@ export class BenefitDeliveriesService {
         };
       }
 
-      return baseData; // Retorno por defecto (si no hay recipientType válido)
+      return baseData;
     }) as SafeBenefitDistribution[];
 
     return Paginator.Format(

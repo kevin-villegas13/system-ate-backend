@@ -22,7 +22,7 @@ export class BenefitDistribution extends BaseEntity {
     nullable: true,
   })
   @JoinColumn({ name: 'child_id' })
-  child?: Child;
+  child?: Child | null;
 
   @ManyToOne(() => RecipientType, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'recipient_type_id' })
