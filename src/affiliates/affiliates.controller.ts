@@ -13,15 +13,18 @@ import {
 import { AffiliatesService } from './affiliates.service';
 import { CreateAffiliateDto } from './dto/create-affiliate.dto';
 import { PaginationAffiliatesDto } from './dto/paginador-affiliates.dto';
-import { GetUser } from 'src/common/decorators/get-user.decorator';
-import { User } from 'src/user/entities/user.entity';
+import { GetUser } from '../common/decorators/get-user.decorator';
+import { User } from '../user/entities/user.entity';
 import { UpdateAffiliateDto } from './dto/update-affiliate.dto';
+import { Authorize } from '../common/decorators/authorize.decorator';
+import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('affiliates')
 export class AffiliatesController {
   constructor(private readonly affiliatesService: AffiliatesService) {}
 
   @Post()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateAffiliateDto, @GetUser() user: User) {
     return this.affiliatesService.create(dto, user?.id);
@@ -42,12 +45,14 @@ export class AffiliatesController {
   }
 
   @Patch(':id')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async update(@Param('id') id: string, @Body() dto: UpdateAffiliateDto) {
     return this.affiliatesService.update(id, dto);
   }
 
   @Delete(':id')
+  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string) {
     return this.affiliatesService.remove(id);
