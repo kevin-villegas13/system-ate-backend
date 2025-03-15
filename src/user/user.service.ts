@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { User } from './entities/user.entity';
-import { Role } from 'src/role/entities/role.entity';
+import { Role } from '../role/entities/role.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { Response } from '../common/response/response.type';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Conflict, NotFound } from '../common/exceptions';
@@ -14,6 +14,8 @@ import {
   SortOrder,
 } from '../common/paginator/type/paginator.interface';
 import { Paginator } from '../common/paginator/paginator.helper';
+import { omit } from 'lodash';
+import { SafeUser } from './interfaces/safe-users.type';
 
 @Injectable()
 export class UserService {
@@ -34,9 +36,14 @@ export class UserService {
     ]);
 
     if (userExists)
-      throw new Conflict(`El nombre de usuario "${username}" ya está en uso.`);
+      throw new Conflict(
+        `El nombre de usuario "${username}" ya está registrado. Intenta con otro.`,
+      );
 
-    if (!role) throw new NotFound(`El rol "${roleName}" no existe.`);
+    if (!role)
+      throw new NotFound(
+        `El rol "${roleName}" no está disponible. Verifica e intenta de nuevo.`,
+      );
 
     await this.userRepository.manager.transaction(async (entityManager) => {
       const user = entityManager.create(User, {
@@ -49,14 +56,14 @@ export class UserService {
 
     return {
       status: true,
-      message: 'Empleado creado exitosamente',
+      message: 'Cuenta creada con éxito.',
       data: null,
     };
   }
 
-  async getAllUsers(
+  async paginateUsers(
     paginationDto: PaginationUsersDto,
-  ): Promise<ResponseList<User>> {
+  ): Promise<ResponseList<SafeUser>> {
     const {
       page,
       limit,
@@ -65,58 +72,66 @@ export class UserService {
       roleId,
     } = paginationDto;
 
-    const queryBuilder = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .select([
-        'user.id',
-        'user.username',
-        'user.isActive',
-        'user.createdAt',
-        'user.updatedAt',
-        'role.id',
-        'role.roleName',
-      ]);
+    const currentPage = Math.max(1, page);
+    const currentLimit = Math.max(1, limit);
 
-    if (search)
-      queryBuilder.andWhere('user.username ILIKE :search', {
-        search: `%${search}%`,
-      });
+    const where: FindOptionsWhere<User> = {
+      ...(roleId && { role: { id: roleId } }),
+      ...(search && {
+        username: ILike(`%${search}%`),
+      }),
+    };
 
-    if (roleId) queryBuilder.andWhere('role.id = :roleId', { roleId });
+    const [data, count] = await this.userRepository.findAndCount({
+      where,
+      relations: ['role'],
+      order: { username: order },
+      skip: (currentPage - 1) * currentLimit,
+      take: currentLimit,
+    });
 
-    queryBuilder.orderBy(
-      'user.username',
-      order === SortOrder.ASC ? 'ASC' : 'DESC',
+    const cleanData = data.map((user) => ({
+      ...omit(user, ['createdAt', 'updatedAt', 'password']),
+      role: user.role ? omit(user.role, ['id']) : undefined,
+    }));
+
+    return Paginator.Format(
+      cleanData,
+      count,
+      currentPage,
+      currentLimit,
+      search,
+      order,
     );
-
-    const [data, count] = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
-
-    return Paginator.Format(data, count, page, limit, search, order);
   }
 
-  async findOne(id: string): Promise<Response<User>> {
+  async findOne(id: string): Promise<Response<SafeUser>> {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: ['role'],
     });
 
-    if (!user) throw new NotFound(`Usuario con ID "${id}" no encontrado.`);
+    if (!user)
+      throw new NotFound(
+        `No se encontró ninguna cuenta con la información proporcionada.`,
+      );
+
+    const cleanUser = {
+      ...omit(user, ['createdAt', 'updatedAt', 'password']),
+      role: user.role ? omit(user.role, ['id']) : undefined,
+    };
 
     return {
       status: true,
-      message: 'Usuario encontrado',
-      data: user,
+      message: 'Cuenta encontrada exitosamente.',
+      data: cleanUser,
     };
   }
 
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
-  ): Promise<Response<User>> {
+  ): Promise<Response<null>> {
     const { username, password, roleName, isActive } = updateUserDto;
 
     const user = await this.userRepository.findOne({
@@ -124,7 +139,10 @@ export class UserService {
       relations: ['role'],
     });
 
-    if (!user) throw new NotFound('Usuario no encontrado');
+    if (!user)
+      throw new NotFound(
+        'No se encontró el usuario. Verifica la información e intenta de nuevo.',
+      );
 
     if (username && username !== user.username) {
       const userExists = await this.userRepository.exist({
@@ -133,7 +151,7 @@ export class UserService {
 
       if (userExists)
         throw new Conflict(
-          `El nombre de usuario "${username}" ya está en uso.`,
+          `El nombre de usuario "${username}" ya está registrado. Intenta con otro.`,
         );
 
       user.username = username;
@@ -143,7 +161,10 @@ export class UserService {
 
     if (roleName && roleName !== user.role.roleName) {
       const role = await this.roleRepository.findOne({ where: { roleName } });
-      if (!role) throw new NotFound(`El rol "${roleName}" no existe.`);
+      if (!role)
+        throw new NotFound(
+          `El rol "${roleName}" no está disponible. Verifica e intenta de nuevo.`,
+        );
       user.role = role;
     }
 
@@ -153,34 +174,41 @@ export class UserService {
 
     return {
       status: true,
-      message: 'Usuario actualizado exitosamente',
-      data: updatedUser,
+      message: 'Información actualizada correctamente.',
+      data: null,
     };
   }
 
-  async deactivate(id: string): Promise<Response<User>> {
+  async toggleActiveStatus(id: string): Promise<Response<null>> {
     const user = await this.findOne(id);
-    if (!user.data) throw new NotFound(`Usuario con ID "${id}" no encontrado.`);
+    if (!user.data)
+      throw new NotFound(
+        'No se encontró el usuario. Verifica la información e intenta de nuevo.',
+      );
 
-    user.data.isActive = false;
-    const updatedUser = await this.userRepository.save(user.data);
+    user.data.isActive = !user.data.isActive;
+    await this.userRepository.save(user.data);
 
     return {
       status: true,
-      message: 'Usuario desactivado exitosamente',
-      data: updatedUser,
+      message: `El usuario ha sido ${user.data.isActive ? 'activado' : 'desactivado'} correctamente.`,
+      data: null,
     };
   }
 
   async remove(id: string): Promise<Response<null>> {
-    const user = await this.findOne(id);
-    if (!user.data) throw new NotFound(`Usuario con ID "${id}" no encontrado.`);
+    const user = await this.userRepository.findOne({ where: { id } });
 
-    await this.userRepository.remove(user.data);
+    if (!user)
+      throw new NotFound(
+        'No se encontró el usuario. Verifica la información e intenta de nuevo.',
+      );
+
+    await this.userRepository.remove(user);
 
     return {
       status: true,
-      message: 'Usuario eliminado exitosamente',
+      message: 'El usuario ha sido eliminado correctamente.',
       data: null,
     };
   }

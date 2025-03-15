@@ -23,14 +23,14 @@ export class UserController {
   @Post()
   @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  async create(@Body() dto: CreateUserDto) {
+    return this.userService.create(dto);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async findAll(@Query() paginationUsersDto: PaginationUsersDto) {
-    return this.userService.getAllUsers(paginationUsersDto);
+  async findAll(@Query() dto: PaginationUsersDto) {
+    return this.userService.paginateUsers(dto);
   }
 
   @Get(':id')
@@ -42,15 +42,15 @@ export class UserController {
   @Patch(':id')
   @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
+  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.update(id, dto);
   }
 
-  @Patch(':id/deactivate')
+  @Patch(':id/toggle-status')
   @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
-  async deactivate(@Param('id') id: string) {
-    return this.userService.deactivate(id);
+  async toggleStatus(@Param('id') id: string) {
+    return this.userService.toggleActiveStatus(id);
   }
 
   @Delete(':id')
