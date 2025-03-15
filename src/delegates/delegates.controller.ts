@@ -18,12 +18,15 @@ import { GetUser } from '../common/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { PaginationDelegatesDto } from './dto/paginador-delegatedto';
 import { UpdateDelegateStatusDto } from './dto/update-delegate-status.dto';
+import { Authorize } from '../common/decorators/authorize.decorator';
+import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('delegates')
 export class DelegatesController {
   constructor(private readonly delegatesService: DelegatesService) {}
 
   @Post()
+  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createDelegateDto: CreateDelegateDto, @GetUser() user: User) {
     return this.delegatesService.create(createDelegateDto, user?.id);
@@ -42,6 +45,7 @@ export class DelegatesController {
   }
 
   @Patch(':id')
+  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   update(
     @Param('id') id: string,
@@ -51,12 +55,14 @@ export class DelegatesController {
   }
 
   @Put(':id/desactive')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   desactive(@Param('id') id: string, @Body() dto: UpdateDelegateStatusDto) {
     return this.delegatesService.deactivate(id, dto);
   }
 
   @Delete(':id')
+  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   remove(@Param('id') id: string) {
     return this.delegatesService.remove(id);

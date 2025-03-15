@@ -14,12 +14,15 @@ import { ChildrenService } from './children.service';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 import { PaginationChildrenDto } from './dto/paginador-children.dto';
+import { Authorize } from '../common/decorators/authorize.decorator';
+import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('children')
 export class ChildrenController {
   constructor(private readonly childrenService: ChildrenService) {}
 
   @Post()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createChildDto: CreateChildDto) {
     return this.childrenService.create(createChildDto);
@@ -38,6 +41,7 @@ export class ChildrenController {
   }
 
   @Patch(':id')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async update(
     @Param('id') id: string,
@@ -47,6 +51,7 @@ export class ChildrenController {
   }
 
   @Delete(':id')
+  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string) {
     return this.childrenService.remove(id);
