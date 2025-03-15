@@ -1,10 +1,12 @@
 import {
+  IsEnum,
   IsNotEmpty,
   IsString,
   IsStrongPassword,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { RoleEnum } from '../../role/entities/enum/role.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({
@@ -17,9 +19,9 @@ export class CreateUserDto {
   @MaxLength(50, {
     message: 'El nombre de usuario no puede tener más de 50 caracteres.',
   })
-  @Matches(/^[a-zA-Z]+$/, {
+  @Matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü'’]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü'’]+)*$/, {
     message:
-      'El nombre de usuario solo puede contener letras, sin números ni símbolos.',
+      'El nombre solo puede contener letras, espacios y caracteres especiales como tildes, diéresis y apóstrofes.',
   })
   username: string;
 
@@ -44,17 +46,10 @@ export class CreateUserDto {
 
   @IsNotEmpty({
     message:
-      'El nombre del rol es obligatorio. Por favor, ingresa el nombre del rol.',
+      'El nombre del rol es obligatorio. Por favor, ingresa un nombre de rol válido.',
   })
-  @IsString({
-    message: 'El nombre del rol debe ser un texto, no números ni símbolos.',
+  @IsEnum(RoleEnum, {
+    message: `El rol debe ser uno de los siguientes valores: ${Object.values(RoleEnum).join(', ')}`,
   })
-  @MaxLength(50, {
-    message: 'El nombre del rol no puede tener más de 50 caracteres.',
-  })
-  @Matches(/^[a-zA-Z]+$/, {
-    message:
-      'El nombre del rol solo puede contener letras, sin números ni símbolos.',
-  })
-  roleName: string;
+  roleName: RoleEnum;
 }

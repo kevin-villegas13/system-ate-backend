@@ -32,7 +32,7 @@ import config from './common/config/config';
       ): Promise<ThrottlerModuleOptions> => ({
         throttlers: [
           {
-            ttl: config.get<number>('THROTTLE_TTL') ?? 60,
+            ttl: config.get<number>('THROTTLE_TTL') ?? 60000,
             limit: config.get<number>('THROTTLE_LIMIT') ?? 10,
           },
         ],

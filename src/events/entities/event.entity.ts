@@ -21,5 +21,4 @@ export class Event extends BaseEntity {
 
   @Column({ type: 'timestamp' })
   date: Date;
-
 }

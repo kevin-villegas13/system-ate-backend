@@ -17,11 +17,9 @@ import { UpdateDelegateDto } from './dto/update-delegate.dto';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { PaginationDelegatesDto } from './dto/paginador-delegatedto';
-import { AuthDecorator } from 'src/common/decorators/jwt.decorator';
 import { UpdateDelegateStatusDto } from './dto/update-delegate-status.dto';
 
 @Controller('delegates')
-@AuthDecorator()
 export class DelegatesController {
   constructor(private readonly delegatesService: DelegatesService) {}
 

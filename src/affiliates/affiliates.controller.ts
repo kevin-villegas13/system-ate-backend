@@ -13,7 +13,6 @@ import {
 import { AffiliatesService } from './affiliates.service';
 import { CreateAffiliateDto } from './dto/create-affiliate.dto';
 import { PaginationAffiliatesDto } from './dto/paginador-affiliates.dto';
-import { AuthDecorator } from '..//common/decorators/jwt.decorator';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { UpdateAffiliateDto } from './dto/update-affiliate.dto';

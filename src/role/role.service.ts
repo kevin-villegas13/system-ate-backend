@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Role } from './entities/role.entity';
 import { Repository } from 'typeorm';
+import { RoleEnum } from './entities/enum/role.enum';
 
 @Injectable()
 export class RoleService {
@@ -11,17 +12,26 @@ export class RoleService {
   ) {}
 
   async onModuleInit() {
-    const roles = ['Administrador', 'Empleado'];
+    const roles = Object.values(RoleEnum);
 
-    for (const roleName of roles) {
-      const exists = await this.roleRepository.findOne({
-        where: { roleName },
-      });
+    // Buscar solo los roles que existen en la BD
+    const existingRoles = await this.roleRepository.find();
+    const existingRoleNames = new Set(
+      existingRoles.map((role) => role.roleName),
+    );
 
-      if (!exists) {
-        const role = this.roleRepository.create({ roleName });
-        await this.roleRepository.save(role);
-      }
+    // Filtrar los roles que aún no existen
+    const newRoles = roles
+      .filter((roleName) => !existingRoleNames.has(roleName))
+      .map((roleName) => this.roleRepository.create({ roleName }));
+
+    if (newRoles.length > 0) {
+      await this.roleRepository.save(newRoles);
+      console.log(
+        `✅ Se insertaron los roles: ${newRoles.map((r) => r.roleName).join(', ')}`,
+      );
+    } else {
+      console.log('ℹ️ Todos los roles ya estaban creados.');
     }
   }
 
