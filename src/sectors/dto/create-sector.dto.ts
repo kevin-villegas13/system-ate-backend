@@ -1,13 +1,13 @@
-import { IsNotEmpty, IsString, Length } from 'class-validator';
+import { IsNotEmpty } from 'class-validator';
+import { IsValidName } from '../../common/validators/is-valid-name';
+import { IsValidCode } from '../../common/validators/is-valid-code';
 
 export class CreateSectorDto {
-  @IsNotEmpty()
-  @IsString()
-  @Length(3, 50)
+  @IsNotEmpty({ message: 'El nombre del sector es obligatorio.' })
+  @IsValidName()
   name: string;
 
-  @IsNotEmpty()
-  @IsString()
-  @Length(3, 12)
+  @IsNotEmpty({ message: 'El código del sector es obligatorio.' })
+  @IsValidCode()
   sectorCode: string;
 }

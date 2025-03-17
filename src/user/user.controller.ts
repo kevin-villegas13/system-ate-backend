@@ -20,6 +20,7 @@ import { RoleEnum } from '../role/entities/enum/role.enum';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
   @Post()
   @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)

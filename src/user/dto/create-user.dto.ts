@@ -7,21 +7,15 @@ import {
   MaxLength,
 } from 'class-validator';
 import { RoleEnum } from '../../role/entities/enum/role.enum';
+import { IsValidName } from '../../common/validators/is-valid-name';
 
 export class CreateUserDto {
-  @IsNotEmpty({
+  @IsNotEmpty({ message: 'El nombre de usuario es obligatorio.' })
+  @IsString({ message: 'El nombre de usuario debe ser un texto.' })
+  @MaxLength(50, { message: 'Máximo 50 caracteres.' })
+  @IsValidName({
     message:
-      'El nombre de usuario es obligatorio. Por favor, ingresa un nombre de usuario.',
-  })
-  @IsString({
-    message: 'El nombre de usuario debe ser un texto, no números ni símbolos.',
-  })
-  @MaxLength(50, {
-    message: 'El nombre de usuario no puede tener más de 50 caracteres.',
-  })
-  @Matches(/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü'’]+(?: [A-Za-zÁÉÍÓÚáéíóúÑñÜü'’]+)*$/, {
-    message:
-      'El nombre solo puede contener letras, espacios y caracteres especiales como tildes, diéresis y apóstrofes.',
+      'El nombre solo puede contener letras, espacios y caracteres especiales.',
   })
   username: string;
 
