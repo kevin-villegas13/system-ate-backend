@@ -1,10 +1,16 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { RecipientType } from './enums/recipient-type.enum';
 
-@Entity('recipient_types')
-export class RecipientType {
+@Entity('recipients')
+export class Recipient {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true, length: 50, name: 'type_name' })
-  typeName: string;
+  @Column({
+    type: 'enum',
+    unique: true,
+    nullable: false,
+    enum: RecipientType,
+  })
+  type: RecipientType;
 }

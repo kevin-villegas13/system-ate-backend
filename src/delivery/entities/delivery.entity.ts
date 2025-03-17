@@ -1,10 +1,16 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { DeliveryStatus } from './enums/delivery-status.enum';
 
 @Entity('delivery_status')
-export class DeliveryStatus {
+export class Delivery {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true, length: 50, name: 'status_name' })
-  statusName: string;
+  @Column({
+    type: 'enum',
+    unique: true,
+    nullable: false,
+    enum: DeliveryStatus,
+  })
+  status: DeliveryStatus;
 }

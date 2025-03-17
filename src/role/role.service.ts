@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Role } from './entities/role.entity';
 import { Repository } from 'typeorm';
 import { RoleEnum } from './entities/enum/role.enum';
 
 @Injectable()
-export class RoleService {
+export class RoleService implements OnModuleInit {
   constructor(
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
@@ -25,14 +25,7 @@ export class RoleService {
       .filter((roleName) => !existingRoleNames.has(roleName))
       .map((roleName) => this.roleRepository.create({ roleName }));
 
-    if (newRoles.length > 0) {
-      await this.roleRepository.save(newRoles);
-      console.log(
-        `✅ Se insertaron los roles: ${newRoles.map((r) => r.roleName).join(', ')}`,
-      );
-    } else {
-      console.log('ℹ️ Todos los roles ya estaban creados.');
-    }
+    if (newRoles.length > 0) await this.roleRepository.save(newRoles);
   }
 
   async getAllRoles(): Promise<Role[]> {

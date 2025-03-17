@@ -1,27 +1,31 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RecipientType } from './entities/recipient.entity';
+import { Recipient } from './entities/recipient.entity';
+import { RecipientType } from './entities/enums/recipient-type.enum';
 
 @Injectable()
 export class RecipientService implements OnModuleInit {
   constructor(
-    @InjectRepository(RecipientType)
-    private readonly recipientRepository: Repository<RecipientType>,
+    @InjectRepository(Recipient)
+    private readonly recipientRepository: Repository<Recipient>,
   ) {}
 
   async onModuleInit() {
-    const recipientTypes = ['Afiliado', 'Hijo de Afiliado', 'Otro'];
+    const recipientTypes = Object.values(RecipientType);
 
-    for (const typeName of recipientTypes) {
-      const exists = await this.recipientRepository.findOne({
-        where: { typeName },
-      });
-      if (!exists) await this.recipientRepository.save({ typeName });
-    }
+    const existingRecipients = await this.recipientRepository.find();
+    const existingTypes = new Set(existingRecipients.map((r) => r.type));
+
+    const newRecipients = recipientTypes
+      .filter((typeName) => !existingTypes.has(typeName))
+      .map((typeName) => this.recipientRepository.create({ type: typeName }));
+
+    if (newRecipients.length > 0)
+      await this.recipientRepository.save(newRecipients);
   }
 
-  async getAllRecipientTypes(): Promise<RecipientType[]> {
+  async getAllRecipientTypes(): Promise<Recipient[]> {
     return this.recipientRepository.find();
   }
 }

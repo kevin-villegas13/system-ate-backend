@@ -1,10 +1,10 @@
 import { BaseEntity } from '../../common/enities/base-entity';
 import { Benefit } from '../../benefits/entities/benefit.entity';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import { RecipientType } from '../../recipient/entities/recipient.entity';
-import { DeliveryStatus } from '../../delivery/entities/delivery.entity';
 import { Affiliate } from '../../affiliates/entities/affiliate.entity';
 import { Child } from '../../children/entities/child.entity';
+import { Delivery } from '../../delivery/entities/delivery.entity';
+import { Recipient } from 'src/recipient/entities/recipient.entity';
 
 @Entity('benefit_distribution')
 export class BenefitDistribution extends BaseEntity {
@@ -24,9 +24,9 @@ export class BenefitDistribution extends BaseEntity {
   @JoinColumn({ name: 'child_id' })
   child?: Child | null;
 
-  @ManyToOne(() => RecipientType, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Recipient, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'recipient_type_id' })
-  recipientType: RecipientType;
+  recipientType: Recipient;
 
   @Column({ default: 1 })
   quantity: number;
@@ -37,7 +37,7 @@ export class BenefitDistribution extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @ManyToOne(() => DeliveryStatus, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Delivery, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'status_id' })
-  status: DeliveryStatus;
+  status: Delivery;
 }

@@ -4,9 +4,8 @@ import { DataSource, FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { BenefitDistribution } from './entities/benefit_delivery.entity';
 import { BadRequest, NotFound } from '../common/exceptions';
 import { CreateBenefitDeliveryDto } from './dto/create-benefit_delivery.dto';
-import { DeliveryStatus } from '../delivery/entities/delivery.entity';
 import { Response } from '../common/response/response.type';
-import { RecipientType } from '../recipient/entities/recipient.entity';
+import { Recipient } from '../recipient/entities/recipient.entity';
 import { DelegateBenefit } from '../delegate_assignments/entities/delegate-benefit.entity';
 import { UpdateBenefitDeliveryDto } from './dto/update-benefit_delivery.dto';
 import { omit } from 'lodash';
@@ -25,6 +24,7 @@ import {
 import { Paginator } from '../common/paginator/paginator.helper';
 import { Affiliate } from '../affiliates/entities/affiliate.entity';
 import { Child } from '../children/entities/child.entity';
+import { Delivery } from '../delivery/entities/delivery.entity';
 
 @Injectable()
 export class BenefitDeliveriesService {
@@ -32,11 +32,11 @@ export class BenefitDeliveriesService {
     @InjectRepository(BenefitDistribution)
     private readonly distributionRepository: Repository<BenefitDistribution>,
 
-    @InjectRepository(DeliveryStatus)
-    private readonly deliveryRepository: Repository<DeliveryStatus>,
+    @InjectRepository(Delivery)
+    private readonly deliveryRepository: Repository<Delivery>,
 
-    @InjectRepository(RecipientType)
-    private readonly recipientTypeRepository: Repository<RecipientType>,
+    @InjectRepository(Recipient)
+    private readonly recipientTypeRepository: Repository<Recipient>,
 
     @InjectRepository(DelegateBenefit)
     private readonly delegateBenefitRepository: Repository<DelegateBenefit>,
@@ -313,9 +313,7 @@ export class BenefitDeliveriesService {
     // Actualizar distribución
     Object.assign(distribution, {
       recipientType: recipientTypeEntity,
-      status: statusId
-        ? ({ id: statusId } as DeliveryStatus)
-        : distribution.status,
+      status: statusId ? ({ id: statusId } as Delivery) : distribution.status,
       notes,
       quantity: Math.max(distribution.quantity, 0),
     });

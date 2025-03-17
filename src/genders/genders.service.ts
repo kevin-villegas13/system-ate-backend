@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Gender } from './entities/gender.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { GenderEnum } from './entities/enums/gender.enum';
 
 @Injectable()
 export class GendersService implements OnModuleInit {
@@ -11,18 +12,16 @@ export class GendersService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const genderNames = ['Masculino', 'Femenino', 'No especificado', 'Otro'];
+    const genders = Object.values(GenderEnum);
 
-    for (const genderName of genderNames) {
-      const exists = await this.genderRepository.findOne({
-        where: { genderName },
-      });
+    const existingGenders = await this.genderRepository.find();
+    const existingNames = new Set(existingGenders.map((g) => g.genderName));
 
-      if (!exists) {
-        const gender = this.genderRepository.create({ genderName });
-        await this.genderRepository.save(gender);
-      }
-    }
+    const newGenders = genders
+      .filter((genderName) => !existingNames.has(genderName))
+      .map((genderName) => this.genderRepository.create({ genderName }));
+
+    if (newGenders.length > 0) await this.genderRepository.save(newGenders);
   }
 
   async getAllGenders(): Promise<Gender[]> {
