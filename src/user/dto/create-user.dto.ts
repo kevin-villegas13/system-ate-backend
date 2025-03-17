@@ -12,7 +12,6 @@ import { IsValidName } from '../../common/validators/is-valid-name';
 export class CreateUserDto {
   @IsNotEmpty({ message: 'El nombre de usuario es obligatorio.' })
   @IsString({ message: 'El nombre de usuario debe ser un texto.' })
-  @MaxLength(50, { message: 'Máximo 50 caracteres.' })
   @IsValidName({
     message:
       'El nombre solo puede contener letras, espacios y caracteres especiales.',

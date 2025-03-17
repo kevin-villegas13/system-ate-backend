@@ -4,44 +4,60 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
-  Matches,
   IsInt,
   Min,
   IsUUID,
 } from 'class-validator';
+import { IsNoSpaces } from '../../common/validators/is-no-spaces';
+import { IsValidCode } from '../../common/validators/is-valid-code';
+import { IsValidName } from '../../common/validators/is-valid-name';
+import { IsPastDate } from '../../common/validators/is-past-date';
 
 export class CreateChildDto {
   @IsNotEmpty({ message: 'Por favor, ingresa el nombre del niño.' })
   @IsString({ message: 'El nombre debe ser un texto.' })
-  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres.' })
   @MaxLength(100, {
-    message: 'El nombre no puede tener más de 100 caracteres.',
+    message: 'El nombre no puede ser más largo de 100 caracteres.',
+  })
+  @IsValidName({
+    message:
+      'El nombre solo debe contener letras, espacios y caracteres especiales como tildes y apóstrofes.',
   })
   firstName: string;
 
   @IsNotEmpty({ message: 'Por favor, ingresa el apellido del niño.' })
   @IsString({ message: 'El apellido debe ser un texto.' })
-  @MinLength(2, { message: 'El apellido debe tener al menos 2 caracteres.' })
   @MaxLength(100, {
-    message: 'El apellido no puede tener más de 100 caracteres.',
+    message: 'El apellido no puede ser más largo de 100 caracteres.',
+  })
+  @IsValidName({
+    message:
+      'El apellido solo debe contener letras, espacios y caracteres especiales como tildes y apóstrofes.',
   })
   lastName: string;
 
-  @IsNotEmpty()
-  @IsDateString({}, { message: 'La fecha de nacimiento debe ser válida.' })
+  @IsNotEmpty({
+    message: 'Por favor, ingresa la fecha de nacimiento del niño.',
+  })
+  @IsDateString({}, { message: 'La fecha de nacimiento no es válida.' })
+  @IsPastDate({
+    message: 'La fecha de nacimiento no puede ser una fecha futura.',
+  })
   birthDate: string;
 
   @IsOptional()
   @IsString({ message: 'La nota debe ser un texto.' })
-  @MaxLength(500, { message: 'La nota no puede tener más de 500 caracteres.' })
+  @MaxLength(500, {
+    message: 'La nota no puede ser más larga de 500 caracteres.',
+  })
+  @IsNoSpaces({
+    message: 'La nota no debe contener espacios en blanco.',
+  })
   note?: string;
 
   @IsNotEmpty({ message: 'Por favor, ingresa el DNI del niño.' })
   @IsString({ message: 'El DNI debe ser un texto.' })
-  @Matches(/^\d{8}$/, {
-    message: 'El DNI debe tener exactamente 8 caracteres numéricos.',
-  })
+  @IsValidCode({ message: 'El DNI debe ser válido.' })
   dni: string;
 
   @IsNotEmpty({ message: 'Por favor, selecciona el género del niño.' })

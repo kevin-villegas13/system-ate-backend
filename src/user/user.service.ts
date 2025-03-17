@@ -15,7 +15,7 @@ import {
 } from '../common/paginator/type/paginator.interface';
 import { Paginator } from '../common/paginator/paginator.helper';
 import { omit } from 'lodash';
-import { SafeUser } from './interfaces/safe-users.type';
+import { UserDto } from '../user/dto/user-omit-fields.dto';
 
 @Injectable()
 export class UserService {
@@ -65,7 +65,7 @@ export class UserService {
 
   async paginateUsers(
     paginationDto: PaginationUsersDto,
-  ): Promise<ResponseList<SafeUser>> {
+  ): Promise<ResponseList<UserDto>> {
     const {
       page,
       limit,
@@ -95,7 +95,7 @@ export class UserService {
     return Paginator.Format(cleanData, count, page, limit, search, order);
   }
 
-  async findOne(id: string): Promise<Response<SafeUser>> {
+  async findOne(id: string): Promise<Response<UserDto>> {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: ['role'],
