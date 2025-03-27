@@ -14,7 +14,7 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationUsersDto } from './dto/pagination-users.dto';
-import { Authorize } from 'src/common/decorators/authorize.decorator';
+import { Authorize } from '../common/decorators/authorize.decorator';
 import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('user')
@@ -30,7 +30,7 @@ export class UserController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async findAll(@Query() dto: PaginationUsersDto) {
+  async paginateUsers(@Query() dto: PaginationUsersDto) {
     return this.userService.paginateUsers(dto);
   }
 

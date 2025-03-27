@@ -50,10 +50,9 @@ export class Child extends BaseEntity {
   @BeforeUpdate()
   updateAge(): void {
     // Validación para asegurarse que birthDate no sea null, undefined o inválido
-    if (this.birthDate && !isNaN(new Date(this.birthDate).getTime())) {
+    if (this.birthDate && !isNaN(new Date(this.birthDate).getTime())) 
       this.age = calculateAge(new Date(this.birthDate)); // Pasar la fecha como objeto Date
-    } else {
-      throw new Error('La fecha de nacimiento no es válida o está vacía');
-    }
+     else 
+      throw new Error('La fecha de nacimiento no es válida o está vacía');  
   } 
 }

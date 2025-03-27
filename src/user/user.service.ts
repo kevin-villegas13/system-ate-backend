@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { User } from './entities/user.entity';
-import { Role } from '../role/entities/role.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, FindOptionsWhere, ILike, Repository } from 'typeorm';
-import { Response } from '../common/response/response.type';
-import { CreateUserDto } from './dto/create-user.dto';
-import { Conflict, NotFound } from '../common/exceptions';
 import * as argon2 from 'argon2';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationUsersDto } from './dto/pagination-users.dto';
+import { omit } from 'lodash';
+import { User } from './entities/user.entity';
+import { Role } from '../role/entities/role.entity';
+import { Conflict, NotFound } from '../common/exceptions';
 import {
   ResponseList,
   SortOrder,
 } from '../common/paginator/type/paginator.interface';
+import { Response } from '../common/response/response.type';
 import { Paginator } from '../common/paginator/paginator.helper';
-import { omit } from 'lodash';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { PaginationUsersDto } from './dto/pagination-users.dto';
 import { UserDto } from '../user/dto/user-omit-fields.dto';
 
 @Injectable()

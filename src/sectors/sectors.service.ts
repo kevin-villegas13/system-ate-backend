@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { Sector } from './entities/sector.entity';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Response } from '../common/response/response.type';
+import { Sector } from './entities/sector.entity';
 import { CreateSectorDto } from './dto/create-sector.dto';
-import { Conflict, NotFound } from 'src/common/exceptions';
+import { Conflict, NotFound } from '../common/exceptions';
 import { UpdateSectorDto } from './dto/update-sector.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { Response } from '../common/response/response.type';
+import {
+  ResponseList,
+  SortOrder,
+} from '../common/paginator/type/paginator.interface';
+import { Paginator } from 'src/common/paginator/paginator.helper';
 
 @Injectable()
 export class SectorsService {
@@ -41,8 +47,32 @@ export class SectorsService {
     };
   }
 
+  async paginationSectors(
+    paginationDto: PaginationDto,
+  ): Promise<ResponseList<Sector>> {
+    const { page, limit, search, order = SortOrder.ASC } = paginationDto;
+
+    const where: FindOptionsWhere<Sector> = {
+      ...(search && { name: ILike(`%${search}%`) }),
+      ...(search && { sectorCode: ILike(`%${search}%`) }),
+    };
+
+    const [data, count] = await this.sectorRepository.findAndCount({
+      where,
+      select: ['id', 'name', 'sectorCode'],
+      order: { name: order, sectorCode: order },
+      skip: (Math.max(1, page) - 1) * Math.max(1, limit),
+      take: Math.max(1, limit),
+    });
+
+    return Paginator.Format(data, count, page, limit, search, order);
+  }
+
   async findOne(id: number): Promise<Response<Sector>> {
-    const sector = await this.sectorRepository.findOne({ where: { id } });
+    const sector = await this.sectorRepository.findOne({
+      where: { id },
+      select: ['id', 'name'],
+    });
 
     if (!sector) throw new NotFound(`Sector con ID "${id}" no encontrado.`);
 

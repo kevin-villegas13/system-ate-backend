@@ -1,22 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Affiliate } from './entities/affiliate.entity';
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { omit } from 'lodash';
+import { Affiliate } from './entities/affiliate.entity';
 import { CreateAffiliateDto } from './dto/create-affiliate.dto';
 import { Response } from '../common/response/response.type';
 import {
   ResponseList,
   SortOrder,
-} from 'src/common/paginator/type/paginator.interface';
+} from '../common/paginator/type/paginator.interface';
 import { PaginationAffiliatesDto } from './dto/paginador-affiliates.dto';
 import { Paginator } from '../common/paginator/paginator.helper';
 import { Conflict, NotFound } from '../common/exceptions';
-import { Gender } from 'src/genders/entities/gender.entity';
-import { Sector } from 'src/sectors/entities/sector.entity';
-import { User } from 'src/user/entities/user.entity';
+import { Gender } from '../genders/entities/gender.entity';
+import { Sector } from '../sectors/entities/sector.entity';
 import { UpdateAffiliateDto } from './dto/update-affiliate.dto';
-import { omit } from 'lodash';
-import { SafeAffiliate, SafeSector } from './interface/safe-affiliate.type';
+import { AffiliateDto } from './dto/affiliates-omit-fields.dto';
 
 @Injectable()
 export class AffiliatesService {
@@ -29,9 +28,6 @@ export class AffiliatesService {
 
     @InjectRepository(Sector)
     private readonly sectorRepository: Repository<Sector>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
   ) {}
 
   async create(
@@ -47,20 +43,20 @@ export class AffiliatesService {
     )
       throw new Conflict('Ya existe un afiliado con este DNI.');
 
-    const [gender, sector, user] = await Promise.all([
+    const [gender, sector] = await Promise.all([
       this.genderRepository.findOne({ where: { id: genderId } }),
       this.sectorRepository.findOne({ where: { id: sectorId } }),
-      this.userRepository.findOne({ where: { id: userId } }),
     ]);
 
-    if (!gender || !sector || !user)
-      throw new NotFound('Género, sector o usuario no encontrados.');
+    if (!gender) throw new NotFound('Género no encontrado.');
+
+    if (!sector) throw new NotFound('Sector no encontrado.');
 
     const affiliate = this.affiliateRepository.create({
       ...affiliateData,
-      gender,
-      sector,
-      createdBy: user,
+      gender: gender,
+      sector: sector,
+      createdBy: { id: userId },
     });
 
     await this.affiliateRepository.save(affiliate);
@@ -74,7 +70,7 @@ export class AffiliatesService {
 
   async paginatedAffiliates(
     paginationDto: PaginationAffiliatesDto,
-  ): Promise<ResponseList<SafeAffiliate>> {
+  ): Promise<ResponseList<AffiliateDto>> {
     const {
       page,
       limit,
@@ -98,20 +94,19 @@ export class AffiliatesService {
       take: limit,
     });
 
-    const cleanData: SafeAffiliate[] = data.map((affiliate) => ({
-      ...omit(affiliate, ['createdAt', 'updatedAt', 'note']),
-      gender: affiliate.gender || undefined,
+    const formattedData: AffiliateDto[] = data.map((affiliate) => ({
+      ...omit(affiliate, ['note', 'createdAt', 'updatedAt', 'sector']),
       sector: affiliate.sector
-        ? (omit(affiliate.sector, ['createdAt', 'updatedAt']) as SafeSector)
+        ? omit(affiliate.sector, ['createdAt', 'updatedAt'])
         : undefined,
     }));
 
-    return Paginator.Format(cleanData, count, page, limit, search, order);
+    return Paginator.Format(formattedData, count, page, limit, search, order);
   }
 
   async getAffiliateByAffiliateCode(
     affiliateCode: string,
-  ): Promise<Response<Affiliate>> {
+  ): Promise<Response<AffiliateDto>> {
     const affiliate = await this.affiliateRepository.findOne({
       where: { affiliateCode: ILike(affiliateCode) },
       relations: ['gender', 'sector'],
@@ -120,13 +115,12 @@ export class AffiliatesService {
     if (!affiliate)
       throw new NotFound(`Afiliado con código ${affiliateCode} no encontrado.`);
 
-    const sanitizedAffiliate = omit(affiliate, [
-      'createdAt',
-      'updatedAt',
-      'sector.sectorCode',
-      'sector.createdAt',
-      'sector.updatedAt',
-    ]) as Affiliate;
+    const sanitizedAffiliate: AffiliateDto = {
+      ...omit(affiliate, ['note', 'createdAt', 'updatedAt', 'sector']),
+      sector: affiliate.sector
+        ? omit(affiliate.sector, ['createdAt', 'updatedAt'])
+        : undefined,
+    };
 
     return {
       status: true,

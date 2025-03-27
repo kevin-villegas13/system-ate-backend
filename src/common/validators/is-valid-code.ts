@@ -14,11 +14,14 @@ export function IsValidCode(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: string) {
           return (
-            typeof value === 'string' && /^[A-Za-z0-9-]{3,12}$/.test(value)
+            typeof value === 'string' &&
+            /^(?:[A-Za-z0-9.-]+|[A-Za-z]{1}[0-9]{3}[A-Za-z]{1}[0-9]{7})$/.test(
+              value,
+            )
           );
         },
         defaultMessage(args: ValidationArguments) {
-          return `${args.property} debe tener entre 3 y 12 caracteres y solo puede contener letras, números y guiones.`;
+          return `${args.property} debe ser válido: puede contener letras, números, puntos y guiones, o seguir el formato de letras, números y guiones.`;
         },
       },
     });

@@ -3,8 +3,6 @@ import {
   IsNotEmpty,
   IsString,
   IsStrongPassword,
-  Matches,
-  MaxLength,
 } from 'class-validator';
 import { RoleEnum } from '../../role/entities/enum/role.enum';
 import { IsValidName } from '../../common/validators/is-valid-name';

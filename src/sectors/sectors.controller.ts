@@ -8,12 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { SectorsService } from './sectors.service';
 import { CreateSectorDto } from './dto/create-sector.dto';
 import { UpdateSectorDto } from './dto/update-sector.dto';
 import { RoleEnum } from '../role/entities/enum/role.enum';
 import { Authorize } from '../common/decorators/authorize.decorator';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('sectors')
 export class SectorsController {
@@ -30,6 +32,12 @@ export class SectorsController {
   @HttpCode(HttpStatus.OK)
   async getAllSectors() {
     return this.sectorsService.getAllSectors();
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async paginationSectors(@Query() dto: PaginationDto) {
+    return this.sectorsService.paginationSectors(dto);
   }
 
   @Get(':id')
