@@ -129,6 +129,25 @@ export class AffiliatesService {
     };
   }
 
+  async sectorsAffiliates(): Promise<Response<Sector[]>> {
+    const sectors = await this.sectorRepository
+      .createQueryBuilder('sector')
+      .leftJoin('affiliates', 'affiliate', 'affiliate.sector_id = sector.id')
+      .select([
+        'sector.id AS id',
+        'sector.name AS name',
+        'COUNT(affiliate.id) AS affiliateCount',
+      ])
+      .groupBy('sector.id, sector.name')
+      .getRawMany();
+
+    return {
+      status: true,
+      data: sectors,
+      message: 'Sectores con la cantidad de afiliados obtenidos correctamente',
+    };
+  }
+
   async update(
     id: string,
     updateAffiliateDto: UpdateAffiliateDto,

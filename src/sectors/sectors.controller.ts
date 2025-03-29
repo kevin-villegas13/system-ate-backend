@@ -28,19 +28,22 @@ export class SectorsController {
     return this.sectorsService.create(createSectorDto);
   }
 
-  @Get()
+  @Get('all')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async getAllSectors() {
     return this.sectorsService.getAllSectors();
   }
 
   @Get()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async paginationSectors(@Query() dto: PaginationDto) {
     return this.sectorsService.paginationSectors(dto);
   }
 
   @Get(':id')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: number) {
     return this.sectorsService.findOne(id);

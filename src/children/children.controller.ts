@@ -18,36 +18,43 @@ import { Authorize } from '../common/decorators/authorize.decorator';
 import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('children')
+@Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
 export class ChildrenController {
   constructor(private readonly childrenService: ChildrenService) {}
 
   @Post()
   @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() createChildDto: CreateChildDto) {
-    return this.childrenService.create(createChildDto);
+  async create(@Body() dto: CreateChildDto) {
+    return this.childrenService.create(dto);
   }
 
   @Get()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
-  async getAffiliates(@Query() paginationDto: PaginationChildrenDto) {
-    return this.childrenService.getAllChildrenPaginated(paginationDto);
+  async paginateChildren(@Query() dto: PaginationChildrenDto) {
+    return this.childrenService.paginateChildren(dto);
   }
 
   @Get(':id')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
-  async findByAffiliateId(@Param('id') id: string) {
-    return this.childrenService.findByAffiliateId(id);
+  async findChildById(@Param('id') id: string) {
+    return this.childrenService.findChildById(id);
+  }
+
+  @Get('affiliate/:affiliateId')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
+  @HttpCode(HttpStatus.OK)
+  async findChildrenByAffiliateId(@Param('affiliateId') affiliateId: string) {
+    return this.childrenService.findChildrenByAffiliateId(affiliateId);
   }
 
   @Patch(':id')
   @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
-  async update(
-    @Param('id') id: string,
-    @Body() updateChildDto: UpdateChildDto,
-  ) {
-    return this.childrenService.update(id, updateChildDto);
+  async update(@Param('id') id: string, @Body() dto: UpdateChildDto) {
+    return this.childrenService.update(id, dto);
   }
 
   @Delete(':id')

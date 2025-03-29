@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateChildDto } from './dto/create-child.dto';
 import { UpdateChildDto } from './dto/update-child.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,10 +16,11 @@ import {
 import { PaginationChildrenDto } from './dto/paginador-children.dto';
 import { omit } from 'lodash';
 import {
-  SafeAffiliate,
-  SafeChild,
-  SafeGender,
-} from './interfaces/safe-children.type';
+  ChildDto,
+  OmitAffiliate,
+  OmitChild,
+  OmitGender,
+} from './dto/child-omit-fields.dto';
 
 @Injectable()
 export class ChildrenService {
@@ -35,11 +36,12 @@ export class ChildrenService {
   ) {}
 
   async create(createChildDto: CreateChildDto): Promise<Response<null>> {
-    const { affiliateId, genderId, ...childrenData } = createChildDto;
+    const { affiliateId, genderId, dni, ...childrenData } = createChildDto;
 
-    const [affiliate, gender] = await Promise.all([
+    const [affiliate, gender, existingChild] = await Promise.all([
       this.affiliateRepository.findOne({ where: { id: affiliateId } }),
       this.genderRepository.findOne({ where: { id: genderId } }),
+      this.childRepository.findOne({ where: { dni: dni } }),
     ]);
 
     if (!affiliate)
@@ -50,6 +52,11 @@ export class ChildrenService {
     if (!gender)
       throw new NotFound(
         `No encontramos el género que especificaste. Asegúrate de haber seleccionado correctamente.`,
+      );
+
+    if (existingChild)
+      throw new ConflictException(
+        `El DNI ${dni} ya está registrado. Verifica los datos e intenta nuevamente.`,
       );
 
     const child = this.childRepository.create({
@@ -114,9 +121,9 @@ export class ChildrenService {
     };
   }
 
-  async getAllChildrenPaginated(
+  async paginateChildren(
     paginationDto: PaginationChildrenDto,
-  ): Promise<ResponseList<SafeChild>> {
+  ): Promise<ResponseList<ChildDto>> {
     const {
       page,
       limit,
@@ -132,60 +139,70 @@ export class ChildrenService {
 
     const [data, count] = await this.childRepository.findAndCount({
       where,
-      relations: ['gender', 'affiliate'],
+      relations: ['gender'],
       order: { firstName: order },
       skip: (page - 1) * limit,
       take: limit,
     });
 
-    const reducedData: SafeChild[] = data.map((child) => ({
+    const reducedData = data.map(({ gender, ...child }) => ({
       ...omit(child, ['createdAt', 'updatedAt', 'note']),
-      gender:
-        child.gender &&
-        (omit(child.gender, ['createdAt', 'updatedAt']) as SafeGender),
-      affiliate: child.affiliate
-        ? (omit(child.affiliate, [
-            'createdAt',
-            'updatedAt',
-            'contact',
-            'note',
-          ]) as SafeAffiliate)
-        : {
-            id: '',
-            dni: '',
-            affiliateCode: '',
-            name: '',
-            birthdate: new Date(),
-            address: '',
-          },
+      gender: omit(gender, ['createdAt', 'updatedAt']) as OmitGender,
     }));
 
     return Paginator.Format(reducedData, count, page, limit, search, order);
   }
 
-  async findByAffiliateId(affiliateId: string): Promise<Response<Child[]>> {
+  async findChildById(childId: string): Promise<Response<ChildDto>> {
+    const child = await this.childRepository.findOne({
+      where: { id: childId },
+      relations: ['gender'],
+    });
+
+    if (!child) throw new NotFound('Niño no encontrado');
+
+    const reducedData: ChildDto = {
+      ...omit(child, ['createdAt', 'updatedAt', 'note']),
+    };
+
+    return {
+      status: true,
+      message: 'Información del niño obtenida correctamente.',
+      data: reducedData,
+    };
+  }
+
+  async findChildrenByAffiliateId(
+    affiliateId: string,
+  ): Promise<Response<OmitAffiliate>> {
     const affiliate = await this.affiliateRepository.findOne({
       where: { id: affiliateId },
+      relations: ['children', 'children.gender'],
     });
 
     if (!affiliate) throw new NotFound('Afiliado no encontrado');
 
-    const children = await this.childRepository.find({
-      where: {
-        affiliate: {
-          id: affiliate.id,
-        },
-      },
-      relations: ['gender'],
-    });
-
-    if (children.length === 0)
+    if (affiliate.children.length === 0)
       throw new NotFound('No se encontraron niños asociados a este afiliado.');
+
+    const reducedAffiliate: OmitAffiliate = {
+      ...omit(affiliate, ['note', 'createdAt', 'updatedAt', 'contact']),
+      children: affiliate.children.map((child) => ({
+        ...omit(child, [
+          'createdAt',
+          'updatedAt',
+          'note',
+          'affiliate',
+          'updateAge',
+        ]),
+        gender: omit(child.gender, ['createdAt', 'updatedAt']) as OmitGender,
+      })) as OmitChild[],
+    };
 
     return {
       status: true,
-      message: `Se encontraron ${children.length} niños/as asociados a este afiliado.`,
-      data: children,
+      message: `Se encontraron ${affiliate.children.length} niños/as asociados a este afiliado.`,
+      data: reducedAffiliate,
     };
   }
 }

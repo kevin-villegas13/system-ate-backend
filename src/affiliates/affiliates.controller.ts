@@ -31,12 +31,21 @@ export class AffiliatesController {
   }
 
   @Get()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async paginatedAffiliates(@Query() dto: PaginationAffiliatesDto) {
     return this.affiliatesService.paginatedAffiliates(dto);
   }
 
+  @Get('sectors')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
+  @HttpCode(HttpStatus.OK)
+  async getAffiliatesWithSectors() {
+    return this.affiliatesService.sectorsAffiliates();
+  }
+
   @Get(':affiliate_code')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   async getAffiliateByAffiliateCode(
     @Param('affiliate_code') affiliate_code: string,

@@ -24,47 +24,44 @@ export class BenefitsController {
   constructor(private readonly benefitsService: BenefitsService) {}
 
   @Post()
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   createBenefit(@Body() dto: CreateBenefitDto) {
     return this.benefitsService.create(dto);
   }
 
   @Post('types')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async createBenefitType(@Body() dto: CreateBenefitTypeDto) {
     return this.benefitsService.createBenefitType(dto);
   }
 
   @Get()
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   paginateDelegates(@Query() dto: PaginationBenefitsDto) {
     return this.benefitsService.paginateBenefits(dto);
   }
 
   @Get(':id')
+  @Authorize(RoleEnum.ADMIN, RoleEnum.EMPLOYEE)
   @HttpCode(HttpStatus.OK)
   findOneBenefit(@Param('id') id: string) {
     return this.benefitsService.findOneBenefit(id);
   }
 
   @Patch(':id')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   updateBenefit(@Param('id') id: string, @Body() dto: UpdateBenefitDto) {
     return this.benefitsService.updateBenefit(id, dto);
   }
 
   @Patch(':id/status')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateBenefitStatusDto) {
     return this.benefitsService.updateBenefitStatus(id, dto);
   }
 
   @Delete(':id')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   deleteBenefit(@Param('id') id: string) {
     return this.benefitsService.deleteBenefit(id);

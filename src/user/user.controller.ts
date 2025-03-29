@@ -18,11 +18,11 @@ import { Authorize } from '../common/decorators/authorize.decorator';
 import { RoleEnum } from '../role/entities/enum/role.enum';
 
 @Controller('user')
+@Authorize(RoleEnum.ADMIN)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateUserDto) {
     return this.userService.create(dto);
@@ -41,21 +41,18 @@ export class UserController {
   }
 
   @Patch(':id')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);
   }
 
   @Patch(':id/toggle-status')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   async toggleStatus(@Param('id') id: string) {
     return this.userService.toggleActiveStatus(id);
   }
 
   @Delete(':id')
-  @Authorize(RoleEnum.ADMIN)
   @HttpCode(HttpStatus.OK)
   async remove(@Param('id') id: string) {
     return this.userService.remove(id);
