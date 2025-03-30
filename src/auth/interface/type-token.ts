@@ -1,3 +1,4 @@
-export interface Tokens {
-  accessToken: string;
+export interface Token {
+  sub: string;
+  roleName: string; 
 }

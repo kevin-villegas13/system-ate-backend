@@ -4,7 +4,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
@@ -14,29 +13,22 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractTokenFromCookie(request);
 
-    if (!token) throw new UnauthorizedException();
-
-    const secretOrKey = async (configService: ConfigService) => {
-      return {
-        secret: configService.get<string>('JWT_SECRET'),
-      };
-    };
+    if (!token)
+      throw new UnauthorizedException('Token de acceso no proporcionado');
 
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: secretOrKey[0],
-      });
+      // Verificar el access token
+      const payload = await this.jwtService.verifyAsync(token);
       request['user'] = payload;
     } catch {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Token de acceso inválido o expirado');
     }
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+  private extractTokenFromCookie(request: Request): string | undefined {
+    return request.cookies['access_token'];
   }
 }

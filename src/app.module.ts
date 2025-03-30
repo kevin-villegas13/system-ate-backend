@@ -17,6 +17,7 @@ import { DeliveryModule } from './delivery/delivery.module';
 import { DatabaseModule } from './database/database.module';
 import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
 import config from './common/config/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [

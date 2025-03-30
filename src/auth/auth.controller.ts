@@ -1,7 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { Response } from 'express';
+import { Body, Controller, Delete, Get, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginAuthDto } from './dto/login-auth.dto';
-import { Throttle } from '@nestjs/throttler';
+import { Cookies } from '../common/decorators/cookies.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -9,7 +11,20 @@ export class AuthController {
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  async login(@Body() loginDto: LoginAuthDto) {
-    return this.authService.login(loginDto);
+  async loginOrRefresh(@Body() dto: LoginAuthDto, @Res() res: Response) {
+    return this.authService.login(dto, res);
+  }
+
+  @Get('refresh-token')
+  async refreshToken(
+    @Cookies('refresh_token') refreshToken: string,
+    @Res() res: Response,
+  ) {
+    return this.authService.refreshToken(refreshToken, res);
+  }
+
+  @Delete('logout')
+  async logout(@Res() res: Response) {
+    return this.authService.logout(res);
   }
 }

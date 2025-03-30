@@ -1,8 +1,12 @@
 import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
+import { IsValidName } from '../../common/validators/is-valid-name';
 
 export class LoginAuthDto {
   @IsNotEmpty()
   @IsString()
+  @IsValidName({
+    message: 'El nombre solo puede contener letras y espacios.',
+  })
   username: string;
 
   @IsNotEmpty()
@@ -16,7 +20,7 @@ export class LoginAuthDto {
     },
     {
       message:
-        'La contraseña debe tener al menos 8 caracteres, 1 minúscula, 1 mayúscula y 1 símbolo',
+        'La contraseña debe tener al menos 8 caracteres e incluir una letra mayúscula, una minúscula y un símbolo (como @, #, $).',
     },
   )
   password: string;
