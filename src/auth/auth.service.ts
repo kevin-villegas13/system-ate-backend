@@ -120,4 +120,24 @@ export class AuthService {
     res.clearCookie('refresh_token');
     return res.status(200).json({ message: 'Sesión cerrada correctamente' });
   }
+
+  async getProfile(accessToken: string) {
+    const decoded = this.jwtService.decode(accessToken);
+
+    if (!decoded) throw new Error('Token inválido');
+
+    const userId = decoded.sub;
+    const user = await this.userRepository.findOne({
+      where: {
+        id: userId,
+      },
+      relations: ['role'],
+    });
+
+    if (!user) throw new Error('Usuario no encontrado');
+
+    const { password, ...userWithoutPassword } = user;
+
+    return userWithoutPassword;
+  }
 }
