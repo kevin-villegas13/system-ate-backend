@@ -20,7 +20,7 @@ export class AuthStrategy extends PassportStrategy(Strategy) {
           // Extraer el token de la cabecera o de las cookies
           if (request?.headers?.authorization) {
             const auth = request.headers.authorization;
-            return auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+            return auth.startsWith('Bearer') ? auth.slice(7) : auth;
           }
           return request?.cookies?.token || null;
         },

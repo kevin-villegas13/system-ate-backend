@@ -1,4 +1,4 @@
 export interface Token {
-  sub: string;
-  roleName: string; 
+  id: string;
+  role: string;
 }

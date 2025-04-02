@@ -72,25 +72,19 @@ export class AuthService {
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     res.status(200).send({ message: 'Login exitoso' });
   }
 
   async refreshToken(refreshToken: string, res: Response): Promise<void> {
-    if (!refreshToken) {
-      throw new UnauthorizedException(
-        'No se ha proporcionado el refresh token',
-      );
-    }
-
     let payload: Token;
     try {
       payload = await this.jwtService.verifyAsync(refreshToken);
@@ -99,16 +93,19 @@ export class AuthService {
     }
 
     // Crear un nuevo access token con el mismo payload
-    const accessToken = await this.jwtService.signAsync({
-      id: payload.sub,
-      role: payload.roleName,
-    });
+    const accessToken = await this.jwtService.signAsync(
+      {
+        id: payload.id,
+        role: payload.role,
+      },
+      { expiresIn: '15m' },
+    );
 
     // Establecer el nuevo access token en la cookie
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Solo en HTTPS si es producción
-      sameSite: 'strict',
+      sameSite: 'lax',
     });
 
     // Enviar la respuesta con el mensaje de éxito
@@ -126,7 +123,8 @@ export class AuthService {
 
     if (!decoded) throw new Error('Token inválido');
 
-    const userId = decoded.sub;
+    const userId = decoded.id;
+
     const user = await this.userRepository.findOne({
       where: {
         id: userId,

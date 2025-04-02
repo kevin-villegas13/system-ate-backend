@@ -31,6 +31,7 @@ export class UserService {
 
   async create(createUserDto: CreateUserDto): Promise<Response<null>> {
     const { username, password, roleName } = createUserDto;
+    console.log(createUserDto);
 
     const [userExists, role] = await Promise.all([
       (await this.userRepository.count({ where: { username } })) > 0,

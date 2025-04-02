@@ -9,6 +9,7 @@ import {
   HttpStatus,
   HttpCode,
   Query,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,7 +25,8 @@ export class UserController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateUserDto) {
+  async create(@Req() req, @Body() dto: CreateUserDto) {
+    console.log('🟢 Cookies recibidas en el backend:', req.cookies);
     return this.userService.create(dto);
   }
 
