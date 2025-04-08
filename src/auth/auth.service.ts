@@ -38,6 +38,7 @@ export class AuthService {
       where: { username },
       relations: ['role'],
     });
+
     if (!user) throw new NotFound('No existe el usuario');
 
     const failedAttempts = this.failedAttempts.get(username);

@@ -73,55 +73,42 @@ export class UserService {
       search,
       order = SortOrder.ASC,
       roleId,
+      status,
     } = paginationDto;
 
+    const pageNum = Math.max(1, page);
+    const limitNum = Math.max(1, limit);
+
+    // Construcción dinámica del filtro "where"
     const where: FindOptionsWhere<User> = {
       ...(roleId && { role: { id: roleId } }),
-      ...(search && { username: ILike(`%${search}%`) }),
+      ...(status !== undefined ? { isActive: Boolean(status) } : {}),
+      ...(search && { username: ILike(`%${search.toLocaleUpperCase()}%`) }),
     };
 
+    // Obtención de los datos paginados
     const [data, count] = await this.userRepository.findAndCount({
       where,
       relations: ['role'],
       order: { username: order },
-      skip: (Math.max(1, page) - 1) * Math.max(1, limit),
-      take: Math.max(1, limit),
+      skip: (pageNum - 1) * limitNum,
+      take: limitNum,
     });
 
+    // Formateo de los datos para eliminar campos sensibles
     const cleanData = data.map((user) => ({
       ...omit(user, ['createdAt', 'updatedAt', 'password']),
       role: user.role ? omit(user.role, ['id']) : undefined,
     }));
 
-    return Paginator.Format(cleanData, count, page, limit, search, order);
-  }
-
-  async findOne(id: string): Promise<Response<UserDto>> {
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations: ['role'],
-    });
-
-    if (!user)
-      throw new NotFound(
-        'No se encontró ninguna cuenta con la información proporcionada.',
-      );
-
-    return {
-      status: true,
-      message: 'Cuenta encontrada exitosamente.',
-      data: {
-        ...omit(user, ['createdAt', 'updatedAt', 'password']),
-        role: user.role ? omit(user.role, ['id']) : undefined,
-      },
-    };
+    return Paginator.Format(cleanData, count, pageNum, limitNum, search, order);
   }
 
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
   ): Promise<Response<null>> {
-    const { username, password, roleName, isActive } = updateUserDto;
+    const { username, password, roleName } = updateUserDto;
 
     return this.dataSource.transaction(async (manager) => {
       const user = await manager.findOne(User, {
@@ -157,7 +144,6 @@ export class UserService {
         username: username || user.username,
         password: password ? await argon2.hash(password) : user.password,
         role: role || user.role,
-        isActive: typeof isActive !== 'undefined' ? isActive : user.isActive,
       });
 
       await manager.save(user);

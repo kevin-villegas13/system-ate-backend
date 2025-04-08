@@ -51,6 +51,6 @@ export class AuthController {
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Cookies('access_token') accessToken: string) {
-    return this.authService.getProfile(accessToken); // Lógica para obtener el perfil del usuario
+    return this.authService.getProfile(accessToken);
   }
 }

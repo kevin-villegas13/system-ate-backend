@@ -25,8 +25,7 @@ export class UserController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Req() req, @Body() dto: CreateUserDto) {
-    console.log('🟢 Cookies recibidas en el backend:', req.cookies);
+  async create(@Body() dto: CreateUserDto) {
     return this.userService.create(dto);
   }
 
@@ -36,14 +35,8 @@ export class UserController {
     return this.userService.paginateUsers(dto);
   }
 
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  async findOne(@Param('id') id: string) {
-    return this.userService.findOne(id);
-  }
-
   @Patch(':id')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.OK)  
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);
   }
