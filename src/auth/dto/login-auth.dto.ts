@@ -1,12 +1,10 @@
 import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
-import { IsValidName } from '../../common/validators/is-valid-name';
+import { IsValidGeneralName } from '../../common/validators/is-valid-name';
 
 export class LoginAuthDto {
   @IsNotEmpty()
   @IsString()
-  @IsValidName({
-    message: 'El nombre solo puede contener letras y espacios.',
-  })
+  @IsValidGeneralName()
   username: string;
 
   @IsNotEmpty()

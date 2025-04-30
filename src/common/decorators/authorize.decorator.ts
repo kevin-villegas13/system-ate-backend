@@ -1,13 +1,14 @@
+import { UserRole } from '@prisma/client';
 import { SetMetadata, applyDecorators, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { RolesGuard } from '../../auth/guard/roles.guard';
-import { JwtAuthGuard } from '../../auth/guard/jwt.guard';
-import { RoleEnum } from 'src/role/entities/enum/role.enum';
+import { AuthStrategy } from '../../auth/strategy/auth.strategy';
+import { RefreshAuthStrategy } from '../../auth/strategy/refresh.strategy';
 
 export const ROLES_KEY = 'roles';
 
-export const Authorize = (...roles: RoleEnum[]) =>
+export const Authorize = (...roles: UserRole[]) =>
   applyDecorators(
     SetMetadata(ROLES_KEY, roles),
-    UseGuards(JwtAuthGuard, RolesGuard),
+    UseGuards(ThrottlerGuard, AuthStrategy, RefreshAuthStrategy, RolesGuard),
   );
-  

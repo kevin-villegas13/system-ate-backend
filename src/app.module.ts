@@ -1,28 +1,20 @@
 import { Module } from '@nestjs/common';
+import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
 import { SectorsModule } from './sectors/sectors.module';
+import { AffiliatesModule } from './affiliates/affiliates.module';
 import { ChildrenModule } from './children/children.module';
 import { DelegatesModule } from './delegates/delegates.module';
 import { BenefitsModule } from './benefits/benefits.module';
-import { DelegateAssignmentsModule } from './delegate_assignments/delegate_assignments.module';
-import { BenefitDeliveriesModule } from './benefit_deliveries/benefit_deliveries.module';
-import { AffiliatesModule } from './affiliates/affiliates.module';
 import { EventsModule } from './events/events.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GendersModule } from './genders/genders.module';
-import { RoleModule } from './role/role.module';
-import { RecipientModule } from './recipient/recipient.module';
-import { DeliveryModule } from './delivery/delivery.module';
 import { DatabaseModule } from './database/database.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
-import config from './common/config/config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [config],
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -39,20 +31,14 @@ import config from './common/config/config';
       }),
     }),
     DatabaseModule,
+    UsersModule,
     AuthModule,
-    UserModule,
     SectorsModule,
+    AffiliatesModule,
     ChildrenModule,
     DelegatesModule,
     BenefitsModule,
-    DelegateAssignmentsModule,
-    BenefitDeliveriesModule,
-    AffiliatesModule,
     EventsModule,
-    GendersModule,
-    RoleModule,
-    RecipientModule,
-    DeliveryModule,
   ],
 })
 export class AppModule {}

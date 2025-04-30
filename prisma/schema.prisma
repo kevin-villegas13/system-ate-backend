@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Sector {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  affiliates Affiliate[]
+  delegates  Delegate[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLogin    DateTime?
+
+  affiliates Affiliate[]
+  delegates  Delegate[]
+  events     Event[]
+}
+
+model Affiliate {
+  id            String   @id @default(uuid())
+  code          Int?     @unique
+  name          String
+  dni           String   @unique
+  gender        Gender
+  contact       String?
+  hasChildren   Boolean  @default(false)
+  hasDisability Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  sectorId String
+  userId   String
+
+  sector Sector @relation(fields: [sectorId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  children            Child[]
+  benefitDistribution BenefitDistribution[]
+}
+
+model Child {
+  id        String    @id @default(uuid())
+  firstName String
+  lastName  String
+  birthDate DateTime?
+  dni       String?   @unique
+  createdAt DateTime  @default(now())
+
+  affiliateId String
+
+  affiliate           Affiliate             @relation(fields: [affiliateId], references: [id])
+  benefitDistribution BenefitDistribution[]
+}
+
+model Delegate {
+  id        String         @id @default(uuid())
+  firstName String
+  lastName  String
+  dni       String         @unique
+  isActive  Boolean        @default(true)
+  status    DelegateStatus
+  createdAt DateTime       @default(now())
+  updatedAt DateTime?
+
+  sectorId String
+  userId   String
+
+  sector Sector @relation(fields: [sectorId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  delegateBenefits     DelegateBenefit[]
+  benefitDistributions BenefitDistribution[] // Nuevo campo para las distribuciones de beneficios del delegado
+}
+
+model Benefit {
+  id          String        @id @default(uuid())
+  name        String
+  type        BenefitType
+  ageRange    String?
+  stock       Int           @default(0)
+  status      BenefitStatus
+  isAvailable Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime?
+
+  delegateBenefits     DelegateBenefit[]
+  benefitDistributions BenefitDistribution[]
+}
+
+model DelegateBenefit {
+  id             String   @id @default(uuid())
+  quantity       Int
+  assignmentDate DateTime @default(now())
+
+  benefitId  String
+  delegateId String
+
+  benefit  Benefit  @relation(fields: [benefitId], references: [id])
+  delegate Delegate @relation(fields: [delegateId], references: [id])
+}
+
+model BenefitDistribution {
+  id            String         @id @default(uuid())
+  recipientType RecipientType
+  quantity      Int            @default(1)
+  deliveryDate  DateTime       @default(now())
+  notes         String?
+  status        DeliveryStatus
+
+  benefitId   String
+  delegateId  String
+  affiliateId String?
+  childId     String?
+
+  benefit   Benefit    @relation(fields: [benefitId], references: [id])
+  delegate  Delegate   @relation(fields: [delegateId], references: [id])
+  affiliate Affiliate? @relation(fields: [affiliateId], references: [id])
+  child     Child?     @relation(fields: [childId], references: [id])
+}
+
+model Event {
+  id          String    @id @default(uuid())
+  eventType   EventType
+  category    String?
+  description String?
+  eventDate   DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum UserRole {
+  admin
+  employee
+}
+
+enum DelegateStatus {
+  active
+  inactive
+  suspended
+}
+
+enum BenefitType {
+  health
+  education
+  food
+  other
+}
+
+enum BenefitStatus {
+  available
+  unavailable
+  pending
+}
+
+enum DeliveryStatus {
+  delivered
+  pending
+  cancelled
+}
+
+enum EventType {
+  workshop
+  meeting
+  campaign
+  other
+}
+
+enum RecipientType {
+  affiliate
+  child
+}
