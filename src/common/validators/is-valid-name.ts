@@ -1,8 +1,4 @@
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from 'class-validator';
+import { registerDecorator, ValidationOptions } from 'class-validator';
 
 export function IsValidGeneralName(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
@@ -11,13 +7,14 @@ export function IsValidGeneralName(validationOptions?: ValidationOptions) {
       target: object.constructor,
       propertyName: propertyName,
       options: {
-        message:
-          'Solo se permiten letras, números, espacios y guiones bajos en el nombre.',
+        message: 'Solo se permiten letras y espacios en el nombre.',
         ...validationOptions,
       },
       validator: {
         validate(value: string) {
-          return typeof value === 'string' && /^[A-Za-z0-9_ ]+$/.test(value);
+          return (
+            typeof value === 'string' && /^[A-Za-záéíóúÁÉÍÓÚÑñ ]+$/.test(value)
+          );
         },
       },
     });

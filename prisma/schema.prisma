@@ -18,13 +18,12 @@ model Sector {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  username     String    @unique
-  passwordHash String    @map("password_hash")
-  role         UserRole
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  lastLogin    DateTime?
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
   affiliates Affiliate[]
   delegates  Delegate[]
@@ -83,7 +82,7 @@ model Delegate {
   user   User   @relation(fields: [userId], references: [id])
 
   delegateBenefits     DelegateBenefit[]
-  benefitDistributions BenefitDistribution[] // Nuevo campo para las distribuciones de beneficios del delegado
+  benefitDistributions BenefitDistribution[]
 }
 
 model Benefit {
@@ -149,7 +148,7 @@ enum Gender {
   other
 }
 
-enum UserRole {
+enum Role {
   admin
   employee
 }

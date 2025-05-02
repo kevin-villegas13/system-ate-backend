@@ -2,7 +2,7 @@
 CREATE TYPE "Gender" AS ENUM ('male', 'female', 'other');
 
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('admin', 'employee');
+CREATE TYPE "Role" AS ENUM ('admin', 'employee');
 
 -- CreateEnum
 CREATE TYPE "DelegateStatus" AS ENUM ('active', 'inactive', 'suspended');
@@ -37,7 +37,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL,
+    "role" "Role" NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastLogin" TIMESTAMP(3),
